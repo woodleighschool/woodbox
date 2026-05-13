@@ -54,6 +54,7 @@ final class CacheManager {
     guard settings.snipeItIsEnabled else {
       try? clearDeviceCache()
       try? clearUserCache()
+      try? clearStatusCache()
       markAsSynced()
       return
     }
@@ -61,6 +62,7 @@ final class CacheManager {
     do {
       async let snipeItAssets = fetchSnipeItAssets()
       async let snipeItUsers = fetchSnipeItUsers()
+      async let snipeItStatuses = fetchSnipeItStatuses()
       async let jamfComputers = fetchJamfComputers()
       async let jamfMobiles = fetchJamfMobileDevices()
       async let intuneDevices = fetchIntuneDevices()
@@ -68,6 +70,7 @@ final class CacheManager {
       try await process(
         snipeItAssets: snipeItAssets,
         snipeItUsers: snipeItUsers,
+        snipeItStatuses: snipeItStatuses,
         jamfComputers: jamfComputers,
         jamfMobiles: jamfMobiles,
         intuneDevices: intuneDevices
@@ -85,6 +88,7 @@ final class CacheManager {
 
     try? clearDeviceCache()
     try? clearUserCache()
+    try? clearStatusCache()
     markAsSynced()
   }
 
@@ -142,6 +146,10 @@ final class CacheManager {
     try await snipeItClient?.fetchSnipeItUsers() ?? []
   }
 
+  private func fetchSnipeItStatuses() async throws -> [SnipeItStatusResponse] {
+    try await snipeItClient?.fetchSnipeItStatuses() ?? []
+  }
+
   private func fetchJamfComputers() async throws -> [JamfComputer] {
     try await jamfClient?.fetchJamfComputers() ?? []
   }
@@ -159,11 +167,13 @@ final class CacheManager {
   private func process(
     snipeItAssets: [SnipeItAssetResponse],
     snipeItUsers: [SnipeItUserResponse],
+    snipeItStatuses: [SnipeItStatusResponse],
     jamfComputers: [JamfComputer],
     jamfMobiles: [JamfMobileDevice],
     intuneDevices: [IntuneDevice]
   ) async throws {
     try processUsers(snipeItUsers)
+    try processStatuses(snipeItStatuses)
     let jamfComputerMap = Dictionary(grouping: jamfComputers, by: \.hardware.serialNumber)
     let jamfMobileMap = Dictionary(grouping: jamfMobiles, by: \.hardware.serialNumber)
     let intuneMap = Dictionary(grouping: intuneDevices, by: \.serialNumber)
@@ -276,6 +286,11 @@ final class CacheManager {
     try modelContext.save()
   }
 
+  private func clearStatusCache() throws {
+    try modelContext.delete(model: SnipeItStatus.self)
+    try modelContext.save()
+  }
+
   private func processUsers(_ snipeItUsers: [SnipeItUserResponse]) throws {
     let existing = try modelContext.fetch(FetchDescriptor<SnipeItUser>())
     var userMap = Dictionary(uniqueKeysWithValues: existing.map { ($0.snipeItId, $0) })
@@ -298,6 +313,26 @@ final class CacheManager {
     let activeIds = Set(snipeItUsers.map(\.id))
     for user in existing where !activeIds.contains(user.snipeItId) {
       modelContext.delete(user)
+    }
+  }
+
+  private func processStatuses(_ snipeItStatuses: [SnipeItStatusResponse]) throws {
+    let existing = try modelContext.fetch(FetchDescriptor<SnipeItStatus>())
+    var statusMap = Dictionary(uniqueKeysWithValues: existing.map { ($0.snipeItId, $0) })
+
+    for statusResponse in snipeItStatuses {
+      if let status = statusMap[statusResponse.id] {
+        status.name = statusResponse.name
+      } else {
+        let status = SnipeItStatus(snipeItId: statusResponse.id, name: statusResponse.name)
+        modelContext.insert(status)
+        statusMap[statusResponse.id] = status
+      }
+    }
+
+    let activeIds = Set(snipeItStatuses.map(\.id))
+    for status in existing where !activeIds.contains(status.snipeItId) {
+      modelContext.delete(status)
     }
   }
 }

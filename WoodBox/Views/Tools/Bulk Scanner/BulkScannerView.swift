@@ -19,6 +19,9 @@ import SwiftUI
     @Query(sort: [SortDescriptor(\BulkScanHistoryItem.scannedAt, order: .reverse)])
     private var scanHistory: [BulkScanHistoryItem]
 
+    @Query(sort: [SortDescriptor(\SnipeItStatus.name)])
+    private var snipeStatuses: [SnipeItStatus]
+
     @State private var alertItem: AlertItem?
     @State private var isBusy = false
     @State private var isScanningPresented = false
@@ -53,14 +56,7 @@ import SwiftUI
     }
 
     private var snipeStatusActions: [SnipeStatusAction] {
-      [
-        ("Stock", settings.snipeItStockStatusId),
-        ("For Sale", settings.snipeItForSaleStatusId),
-        ("Ready to Deploy", settings.snipeItReadyToDeployStatusId),
-        ("Spare", settings.snipeItSpareStatusId),
-      ]
-      .filter { $0.1 > 0 }
-      .map { SnipeStatusAction(title: $0.0, statusId: $0.1) }
+      snipeStatuses.map { SnipeStatusAction(title: $0.name, statusId: $0.snipeItId) }
     }
 
     private var exportCSV: String {
@@ -171,7 +167,7 @@ import SwiftUI
           {
             Section("Update Snipe-IT Status") {
               ForEach(snipeStatusActions) { action in
-                Button(action.title) { Task { await updateSnipeStatus(action.statusId) } }
+                Button(action.title) { Task { await updateSnipeStatus(action) } }
               }
             }
           }
@@ -307,7 +303,7 @@ import SwiftUI
     }
 
     @MainActor
-    private func updateSnipeStatus(_ statusId: Int) async {
+    private func updateSnipeStatus(_ action: SnipeStatusAction) async {
       guard let client = settings.snipeItClient else { return }
 
       await withBusyState {
@@ -336,7 +332,7 @@ import SwiftUI
               try await client.checkinSnipeItAsset(
                 assetId: assetId,
                 request: SnipeItCheckinRequest(
-                  statusId: statusId,
+                  statusId: action.statusId,
                   name: nil,
                   note: nil,
                   locationId: nil
@@ -346,13 +342,14 @@ import SwiftUI
               try await client.updateSnipeItAsset(
                 assetId: assetId,
                 request: SnipeItUpdateRequest(
-                  statusId: statusId,
+                  statusId: action.statusId,
                   notes: nil,
                   customFields: nil
                 )
               )
             }
-            device.statusId = statusId
+            device.statusId = action.statusId
+            device.status = action.title
             device.assignedUserName = nil
             device.assignedUserEmail = nil
             currentOperationItems[index].status = .success

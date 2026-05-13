@@ -2,7 +2,7 @@
 //  BulkScanHistoryItem.swift
 //  WoodBox
 //
-//  Created by Codex on 28/2/2026.
+//  Created by Alexander Hyde on 28/2/2026.
 //
 
 #if os(iOS)

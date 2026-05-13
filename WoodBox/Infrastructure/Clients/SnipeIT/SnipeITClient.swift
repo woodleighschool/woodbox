@@ -84,6 +84,24 @@ struct SnipeITClient {
     return allUsers
   }
 
+  func fetchSnipeItStatuses() async throws -> [SnipeItStatusResponse] {
+    var allStatuses: [SnipeItStatusResponse] = []
+    var offset = 0
+    let limit = 200
+
+    while true {
+      let page = try await fetchSnipeItStatusesPage(limit: limit, offset: offset)
+      allStatuses.append(contentsOf: page.rows)
+
+      if page.rows.count < limit {
+        break
+      }
+      offset += limit
+    }
+
+    return allStatuses
+  }
+
   // MARK: - Private Helpers
 
   private func fetchSnipeItAssetsPage(limit: Int, offset: Int) async throws -> SnipeItAssetsResponse {
@@ -116,6 +134,25 @@ struct SnipeITClient {
       SnipeItUsersResponse.self,
       from: request,
       action: "fetch users",
+      integration: "Snipe-IT"
+    )
+  }
+
+  private func fetchSnipeItStatusesPage(
+    limit: Int, offset: Int
+  ) async throws -> SnipeItStatusesResponse {
+    let url = baseURL.appending(
+      path: "api/v1/statuslabels",
+      queryItems: [
+        URLQueryItem(name: "limit", value: "\(limit)"),
+        URLQueryItem(name: "offset", value: "\(offset)"),
+      ]
+    )
+    let request = authorizedRequest(url: url)
+    return try await http.decode(
+      SnipeItStatusesResponse.self,
+      from: request,
+      action: "fetch statuses",
       integration: "Snipe-IT"
     )
   }

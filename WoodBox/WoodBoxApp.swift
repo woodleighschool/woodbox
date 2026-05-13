@@ -14,6 +14,7 @@ struct WoodBoxApp: App {
     var modelTypes: [any PersistentModel.Type] = [
       Device.self,
       MDMRecord.self,
+      SnipeItStatus.self,
       SnipeItUser.self,
     ]
 

@@ -14,12 +14,15 @@ struct SalePreparationView: View {
   @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
 
+  @Query(sort: [SortDescriptor(\SnipeItStatus.name)])
+  private var snipeStatuses: [SnipeItStatus]
+
   @Bindable var deviceSelection: DeviceSelectionState
 
   private struct FormState {
     var condition: DeviceCondition = .a
     var conditionDescription = ""
-    var updateSnipeItStatus = true
+    var selectedSnipeStatusId: Int?
     var deleteInMDM = false
   }
 
@@ -33,6 +36,11 @@ struct SalePreparationView: View {
 
   private var canUpdateSnipeIt: Bool {
     deviceSelection.selectedDevice?.hasSnipeItAsset == true
+  }
+
+  private var selectedSnipeStatusName: String? {
+    guard let statusId = form.selectedSnipeStatusId else { return nil }
+    return snipeStatuses.first { $0.snipeItId == statusId }?.name
   }
 
   private var activeProviders: [String] {
@@ -150,16 +158,8 @@ struct SalePreparationView: View {
   private var automationSection: some View {
     Section {
       if modelData.settings.snipeItIsEnabled {
-        Toggle(isOn: $form.updateSnipeItStatus) {
-          Label {
-            Text("Update Snipe-IT Status")
-          } icon: {
-            Image("snipeit")
-              .resizable()
-              .scaledToFit()
-          }
-        }
-        .disabled(!canUpdateSnipeIt)
+        SnipeStatusPicker("Snipe-IT Status", selection: $form.selectedSnipeStatusId)
+          .disabled(!canUpdateSnipeIt)
       }
 
       if !activeProviders.isEmpty {
@@ -197,7 +197,7 @@ struct SalePreparationView: View {
         }
       }
 
-      if form.updateSnipeItStatus,
+      if let statusId = form.selectedSnipeStatusId,
          let assetId = device.snipeItId,
          let snipeItClient = modelData.settings.snipeItClient
       {
@@ -215,11 +215,13 @@ struct SalePreparationView: View {
         try await snipeItClient.updateSnipeItAsset(
           assetId: assetId,
           request: SnipeItUpdateRequest(
-            statusId: modelData.settings.snipeItForSaleStatusId,
+            statusId: statusId,
             notes: nil,
             customFields: customFields.isEmpty ? nil : customFields
           )
         )
+        device.statusId = statusId
+        device.status = selectedSnipeStatusName
       }
 
       resetForm()
@@ -230,12 +232,12 @@ struct SalePreparationView: View {
 
   private func resetForm() {
     deviceSelection.clear()
-    form = FormState(updateSnipeItStatus: canUpdateSnipeIt)
+    form = FormState()
     alertItem = nil
   }
 
   private func syncFormWithSelection() {
-    form.updateSnipeItStatus = canUpdateSnipeIt
+    form.selectedSnipeStatusId = nil
     if activeProviders.isEmpty {
       form.deleteInMDM = false
     }

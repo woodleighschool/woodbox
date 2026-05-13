@@ -36,29 +36,11 @@ final class AppSettings {
     }
   }
 
-  var snipeItForSaleStatusId: Int {
-    didSet {
-      UserDefaults.standard.set(snipeItForSaleStatusId, forKey: "snipeItForSaleStatusId")
-    }
-  }
-
-  var snipeItReadyToDeployStatusId: Int {
+  var snipeItSpareDeviceNameRegex: String {
     didSet {
       UserDefaults.standard.set(
-        snipeItReadyToDeployStatusId, forKey: "snipeItReadyToDeployStatusId"
+        snipeItSpareDeviceNameRegex, forKey: "snipeItSpareDeviceNameRegex"
       )
-    }
-  }
-
-  var snipeItStockStatusId: Int {
-    didSet {
-      UserDefaults.standard.set(snipeItStockStatusId, forKey: "snipeItStockStatusId")
-    }
-  }
-
-  var snipeItSpareStatusId: Int {
-    didSet {
-      UserDefaults.standard.set(snipeItSpareStatusId, forKey: "snipeItSpareStatusId")
     }
   }
 
@@ -274,12 +256,8 @@ final class AppSettings {
     snipeItIsEnabled = UserDefaults.standard.bool(forKey: "snipeItIsEnabled")
     snipeItBaseURL = UserDefaults.standard.string(forKey: "snipeItBaseURL") ?? ""
     snipeItAPIKey = keychain.read(key: "snipeItAPIKey") ?? ""
-    snipeItForSaleStatusId = UserDefaults.standard.integer(forKey: "snipeItForSaleStatusId")
-    snipeItReadyToDeployStatusId = UserDefaults.standard.integer(
-      forKey: "snipeItReadyToDeployStatusId"
-    )
-    snipeItStockStatusId = UserDefaults.standard.integer(forKey: "snipeItStockStatusId")
-    snipeItSpareStatusId = UserDefaults.standard.integer(forKey: "snipeItSpareStatusId")
+    snipeItSpareDeviceNameRegex =
+      UserDefaults.standard.string(forKey: "snipeItSpareDeviceNameRegex") ?? ""
     snipeItConditionField =
       UserDefaults.standard.string(forKey: "snipeItConditionField")
         ?? UserDefaults.standard.string(forKey: "snipeItConditionFieldKey")

@@ -54,6 +54,18 @@ struct SnipeItUserResponse: Decodable {
   let email: String?
 }
 
+// MARK: Statuses
+
+/// Response
+struct SnipeItStatusesResponse: Decodable {
+  let rows: [SnipeItStatusResponse]
+}
+
+struct SnipeItStatusResponse: Decodable {
+  let id: Int
+  let name: String
+}
+
 // MARK: Update Asset
 
 /// Request

@@ -14,6 +14,9 @@ struct ReturnCheckInView: View {
   @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
 
+  @Query(sort: [SortDescriptor(\SnipeItStatus.name)])
+  private var snipeStatuses: [SnipeItStatus]
+
   @Bindable var deviceSelection: DeviceSelectionState
 
   private struct FormState {
@@ -22,7 +25,7 @@ struct ReturnCheckInView: View {
     var goodCondition = true
     var hasCharger = true
     var deleteInMDM = false
-    var updateSnipeItStatus = false
+    var selectedSnipeStatusId: Int?
     var createFreshserviceRequest = false
     var notes = ""
   }
@@ -36,6 +39,11 @@ struct ReturnCheckInView: View {
 
   private var canUpdateSnipeIt: Bool {
     deviceSelection.selectedDevice?.hasSnipeItAsset == true
+  }
+
+  private var selectedSnipeStatusName: String? {
+    guard let statusId = form.selectedSnipeStatusId else { return nil }
+    return snipeStatuses.first { $0.snipeItId == statusId }?.name
   }
 
   private var canCreateFreshserviceRequest: Bool {
@@ -153,16 +161,8 @@ struct ReturnCheckInView: View {
       }
 
       if modelData.settings.snipeItIsEnabled {
-        Toggle(isOn: $form.updateSnipeItStatus) {
-          Label {
-            Text("Update Snipe-IT Status")
-          } icon: {
-            Image("snipeit")
-              .resizable()
-              .scaledToFit()
-          }
-        }
-        .disabled(!canUpdateSnipeIt)
+        SnipeStatusPicker("Snipe-IT Status", selection: $form.selectedSnipeStatusId)
+          .disabled(!canUpdateSnipeIt)
       }
 
       if modelData.settings.freshserviceIsEnabled {
@@ -203,19 +203,22 @@ struct ReturnCheckInView: View {
         }
       }
 
-      if form.updateSnipeItStatus, let assetId = device.snipeItId,
+      if let statusId = form.selectedSnipeStatusId, let assetId = device.snipeItId,
          let snipeItClient = modelData.settings.snipeItClient
       {
-        // Update Snipe-IT status
         try await snipeItClient.checkinSnipeItAsset(
           assetId: assetId,
           request: SnipeItCheckinRequest(
-            statusId: modelData.settings.snipeItStockStatusId,
+            statusId: statusId,
             name: nil,
             note: "Returned via WoodBox",
             locationId: nil
           )
         )
+        device.statusId = statusId
+        device.status = selectedSnipeStatusName
+        device.assignedUserName = nil
+        device.assignedUserEmail = nil
       }
 
       if form.createFreshserviceRequest,
@@ -262,7 +265,7 @@ struct ReturnCheckInView: View {
     guard let device = deviceSelection.selectedDevice else {
       form.endUserName = ""
       form.endUserEmail = ""
-      form.updateSnipeItStatus = false
+      form.selectedSnipeStatusId = nil
       form.createFreshserviceRequest = false
       form.deleteInMDM = false
       return
@@ -270,7 +273,7 @@ struct ReturnCheckInView: View {
 
     form.endUserName = device.assignedUserName ?? ""
     form.endUserEmail = device.assignedUserEmail ?? ""
-    form.updateSnipeItStatus = device.hasSnipeItAsset
+    form.selectedSnipeStatusId = nil
     form.createFreshserviceRequest = canCreateFreshserviceRequest
     if activeProviders.isEmpty {
       form.deleteInMDM = false

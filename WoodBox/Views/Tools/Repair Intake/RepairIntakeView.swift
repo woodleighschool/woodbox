@@ -103,9 +103,16 @@ struct RepairIntakeView: View {
     Section {
       TextField("Problem", text: $form.problem, prompt: Text("e.g. Broken Screen"))
 
-      SparePicker(
-        spareStatusId: modelData.settings.snipeItSpareStatusId, selection: $form.selectedSpare
-      )
+      if modelData.settings.snipeItIsEnabled {
+        SpareDevicePicker(
+          nameRegex: modelData.settings.snipeItSpareDeviceNameRegex,
+          selection: $form.selectedSpare
+        )
+        .onChange(of: modelData.settings.snipeItSpareDeviceNameRegex) { _, _ in
+          form.selectedSpare = nil
+        }
+      }
+
       TextField(
         "Notes", text: $form.notes,
         prompt: Text(
@@ -289,24 +296,30 @@ struct RepairIntakeView: View {
 
 // MARK: - Subviews
 
-private struct SparePicker: View {
-  @Query private var spareDevices: [Device]
+private struct SpareDevicePicker: View {
+  @Query private var devices: [Device]
   @Binding var selection: Device?
+  let nameRegex: String
 
-  init(spareStatusId: Int, selection: Binding<Device?>) {
+  init(nameRegex: String, selection: Binding<Device?>) {
+    self.nameRegex = nameRegex
     _selection = selection
-    _spareDevices = Query(
-      filter: #Predicate<Device> { $0.statusId == spareStatusId },
+    _devices = Query(
       sort: \Device.name
     )
+  }
+
+  private var spareDevices: [Device] {
+    devices.filter { DeviceNameMatcher.matches($0.name, pattern: nameRegex) }
   }
 
   var body: some View {
     Picker("Spare Device", selection: $selection) {
       Text("None").tag(nil as Device?)
-      ForEach(spareDevices) { spare in
-        Text(spare.name ?? "").tag(spare as Device?)
+      ForEach(spareDevices) { device in
+        Text(device.name ?? device.serial).tag(device as Device?)
       }
     }
+    .disabled(spareDevices.isEmpty)
   }
 }

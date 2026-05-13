@@ -5,6 +5,7 @@
 //  Created by Alexander Hyde on 17/2/2026.
 //
 
+import SwiftData
 import SwiftUI
 
 // MARK: - Types
@@ -123,6 +124,9 @@ struct SettingsView: View {
 struct SnipeItSettingsView: View {
   // MARK: - Properties
 
+  @Query(sort: [SortDescriptor(\SnipeItStatus.name)])
+  private var statuses: [SnipeItStatus]
+
   @Bindable var settings: AppSettings
   let cacheManager: CacheManager
 
@@ -153,15 +157,28 @@ struct SnipeItSettingsView: View {
       }
 
       Section("Configuration") {
-        TextField(
-          "Ready to Deploy Status ID", value: $settings.snipeItReadyToDeployStatusId,
-          format: .number
-        )
-        TextField("Stock Status ID", value: $settings.snipeItStockStatusId, format: .number)
-        TextField("For Sale Status ID", value: $settings.snipeItForSaleStatusId, format: .number)
-        TextField("Spare Status ID", value: $settings.snipeItSpareStatusId, format: .number)
+        TextField("Spare Device Name Regex", text: $settings.snipeItSpareDeviceNameRegex)
         TextField("Condition Custom Field", text: $settings.snipeItConditionField)
         TextField("Condition Notes Custom Field", text: $settings.snipeItConditionNotesField)
+      }
+
+      Section("Snipe-IT Statuses") {
+        if statuses.isEmpty {
+          Text("Refresh the cache to fetch status labels.")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        } else {
+          ForEach(statuses) { status in
+            LabeledContent(status.name, value: String(status.snipeItId))
+          }
+        }
+
+        Button {
+          Task { await cacheManager.sync() }
+        } label: {
+          Label("Refresh Statuses", systemImage: "arrow.clockwise")
+        }
+        .disabled(settings.snipeItIsEnabled == false || cacheManager.isSyncing)
       }
     }
     .formStyle(.grouped)
