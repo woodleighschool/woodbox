@@ -258,8 +258,19 @@ struct RepairIntakeView: View {
             message: "No Snipe-IT user found for \(form.endUserEmail)"
           )
         }
+        let statusId = spare.statusId ?? 0
+        try? await snipeItClient.checkinSnipeItAsset(
+          assetId: spareId,
+          request: SnipeItCheckinRequest(
+            statusId: statusId,
+            name: nil,
+            note: nil,
+            locationId: nil
+          )
+        )
+
         let checkout = SnipeItCheckoutRequest(
-          assignedUser: snipeUser.snipeItId, statusId: spare.statusId ?? 0, note: nil
+          assignedUser: snipeUser.snipeItId, statusId: statusId, note: nil
         )
         try await snipeItClient.checkoutSnipeItAsset(assetId: spareId, request: checkout)
       }
