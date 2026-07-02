@@ -41,9 +41,14 @@ struct JamfMobileDevice: Decodable {
   let displayName: String?
   let general: JamfMobileDeviceGeneral
   let hardware: JamfMobileDeviceHardware
+
+  var name: String? {
+    general.displayName ?? displayName
+  }
 }
 
 struct JamfMobileDeviceGeneral: Decodable {
+  let displayName: String?
   let lastInventoryUpdateDate: String?
 }
 

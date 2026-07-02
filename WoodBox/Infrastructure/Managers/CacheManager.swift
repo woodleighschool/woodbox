@@ -229,7 +229,7 @@ final class CacheManager {
         MDMRecord(
           provider: .jamf,
           deviceId: $0.mobileDeviceId,
-          deviceName: $0.displayName.nilIfEmpty,
+          deviceName: $0.name.nilIfEmpty,
           lastCheckIn: $0.general.lastInventoryUpdateDate.flatMap {
             try? Date($0, strategy: .iso8601)
           },
