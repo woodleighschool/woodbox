@@ -65,6 +65,9 @@ struct ReturnCheckInView: View {
       .formStyle(.grouped)
       .deviceSearch(selection: deviceSelection)
       .scrollDismissesKeyboard(.interactively)
+      .refreshable {
+        await modelData.cacheManager.sync()
+      }
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           if isSubmitting {
@@ -193,13 +196,16 @@ struct ReturnCheckInView: View {
 
     do {
       if form.deleteInMDM {
-        // Remove device from MDM provider(s)
-        for record in device.mdmRecords {
-          try await MDMDeletionService.deleteAndRemove(
-            record: record,
-            from: device,
-            modelContext: modelContext
-          )
+        let requests = MDMDeletionService.remove(
+          records: Array(device.mdmRecords),
+          from: device,
+          modelContext: modelContext
+        )
+        Task { @MainActor in
+          let errors = await MDMDeletionService.delete(requests)
+          if let error = errors.first {
+            alertItem = .error(error)
+          }
         }
       }
 

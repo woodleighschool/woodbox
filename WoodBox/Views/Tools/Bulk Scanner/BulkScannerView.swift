@@ -81,6 +81,9 @@ import SwiftUI
     var body: some View {
       reviewContent
         .navigationTitle("Bulk Scanner")
+        .refreshable {
+          await modelData.cacheManager.sync()
+        }
         .toolbar { toolbarContent }
         .confirmationDialog("Clear all scanned devices?", isPresented: $showClearConfirmation) {
           Button("Clear All", role: .destructive, action: clearHistory)
@@ -231,8 +234,6 @@ import SwiftUI
             case .pending:
               Image(systemName: "circle")
                 .foregroundStyle(.secondary)
-            case .processing:
-              ProgressView().controlSize(.small)
             case .success:
               Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.green)
@@ -255,7 +256,8 @@ import SwiftUI
                 isOperationSheetPresented = false
               }
             } else {
-              ProgressView().controlSize(.regular)
+              Image(systemName: "clock")
+                .foregroundStyle(.secondary)
             }
           }
         }
@@ -311,53 +313,105 @@ import SwiftUI
 
         currentOperationTitle = "Updating Snipe-IT Status"
         currentOperationItems = scanHistory.map {
-          BulkOperationItem(id: $0.id, device: $0.device, status: .pending)
+          guard $0.device.snipeItId != nil else {
+            return BulkOperationItem(
+              id: $0.device.serial,
+              device: $0.device,
+              status: .skipped,
+              details: "No Snipe-IT ID"
+            )
+          }
+
+          return BulkOperationItem(
+            id: $0.device.serial,
+            device: $0.device,
+            status: .success,
+            details: "Queued"
+          )
         }
         isOperationSheetPresented = true
 
-        for index in currentOperationItems.indices {
-          let item = currentOperationItems[index]
-          let device = item.device
+        let workItems = scanHistory.compactMap { entry -> SnipeStatusWorkItem? in
+          let device = entry.device
+          guard let assetId = device.snipeItId else { return nil }
+          let wasAssigned = device.assignedUserName != nil || device.assignedUserEmail != nil
 
-          guard let assetId = device.snipeItId else {
-            currentOperationItems[index].status = .skipped
-            currentOperationItems[index].details = "No Snipe-IT ID"
-            continue
-          }
+          device.statusId = action.statusId
+          device.status = action.title
+          device.assignedUserName = nil
+          device.assignedUserEmail = nil
 
-          currentOperationItems[index].status = .processing
+          return SnipeStatusWorkItem(
+            id: device.serial,
+            assetId: assetId,
+            wasAssigned: wasAssigned
+          )
+        }
 
-          do {
-            if device.assignedUserName != nil || device.assignedUserEmail != nil {
-              try await client.checkinSnipeItAsset(
-                assetId: assetId,
-                request: SnipeItCheckinRequest(
-                  statusId: action.statusId,
-                  name: nil,
-                  note: nil,
-                  locationId: nil
-                )
-              )
-            } else {
-              try await client.updateSnipeItAsset(
-                assetId: assetId,
-                request: SnipeItUpdateRequest(
-                  statusId: action.statusId,
-                  notes: nil,
-                  customFields: nil
-                )
-              )
-            }
-            device.statusId = action.statusId
-            device.status = action.title
-            device.assignedUserName = nil
-            device.assignedUserEmail = nil
-            currentOperationItems[index].status = .success
-          } catch {
+        let failures = await updateSnipeStatusConcurrently(
+          workItems,
+          action: action,
+          client: client
+        )
+
+        for failure in failures {
+          if let index = currentOperationItems.firstIndex(where: { $0.id == failure.id }) {
             currentOperationItems[index].status = .failed
-            currentOperationItems[index].details = error.localizedDescription
+            currentOperationItems[index].details = failure.message
           }
         }
+
+        for index in currentOperationItems.indices
+          where currentOperationItems[index].details == "Queued"
+        {
+          currentOperationItems[index].details = nil
+        }
+      }
+    }
+
+    private func updateSnipeStatusConcurrently(
+      _ workItems: [SnipeStatusWorkItem],
+      action: SnipeStatusAction,
+      client: SnipeITClient
+    ) async -> [OperationFailure] {
+      await withTaskGroup(of: OperationFailure?.self) { group in
+        for item in workItems {
+          group.addTask {
+            do {
+              if item.wasAssigned {
+                try await client.checkinSnipeItAsset(
+                  assetId: item.assetId,
+                  request: SnipeItCheckinRequest(
+                    statusId: action.statusId,
+                    name: nil,
+                    note: nil,
+                    locationId: nil
+                  )
+                )
+              } else {
+                try await client.updateSnipeItAsset(
+                  assetId: item.assetId,
+                  request: SnipeItUpdateRequest(
+                    statusId: action.statusId,
+                    notes: nil,
+                    customFields: nil
+                  )
+                )
+              }
+              return nil
+            } catch {
+              return OperationFailure(id: item.id, message: error.localizedDescription)
+            }
+          }
+        }
+
+        var failures: [OperationFailure] = []
+        for await failure in group {
+          if let failure {
+            failures.append(failure)
+          }
+        }
+        return failures
       }
     }
 
@@ -368,40 +422,64 @@ import SwiftUI
 
         currentOperationTitle = "Deleting from MDM"
         currentOperationItems = scanHistory.map {
-          BulkOperationItem(id: $0.id, device: $0.device, status: .pending)
+          BulkOperationItem(
+            id: $0.device.serial,
+            device: $0.device,
+            status: $0.device.mdmRecords.isEmpty ? .skipped : .success,
+            details: $0.device.mdmRecords.isEmpty ? "No MDM records" : "Queued"
+          )
         }
         isOperationSheetPresented = true
 
-        for index in currentOperationItems.indices {
-          let item = currentOperationItems[index]
-          let device = item.device
+        let requestItems = scanHistory.flatMap { entry -> [MDMDeletionWorkItem] in
+          let device = entry.device
+          let requests = MDMDeletionService.remove(
+            records: Array(device.mdmRecords),
+            from: device,
+            modelContext: modelContext
+          )
+          return requests.map { MDMDeletionWorkItem(id: device.serial, request: $0) }
+        }
 
-          guard !device.mdmRecords.isEmpty else {
-            currentOperationItems[index].status = .skipped
-            currentOperationItems[index].details = "No MDM records"
-            continue
-          }
+        let failures = await deleteMDMConcurrently(requestItems)
 
-          currentOperationItems[index].status = .processing
-
-          var hasError = false
-          for record in device.mdmRecords {
-            do {
-              try await MDMDeletionService.deleteAndRemove(
-                record: record,
-                from: device,
-                modelContext: modelContext
-              )
-            } catch {
-              hasError = true
-            }
-          }
-
-          currentOperationItems[index].status = hasError ? .failed : .success
-          if hasError {
-            currentOperationItems[index].details = "Deletion failed"
+        for failure in failures {
+          if let index = currentOperationItems.firstIndex(where: { $0.id == failure.id }) {
+            currentOperationItems[index].status = .failed
+            currentOperationItems[index].details = failure.message
           }
         }
+
+        for index in currentOperationItems.indices
+          where currentOperationItems[index].details == "Queued"
+        {
+          currentOperationItems[index].details = nil
+        }
+      }
+    }
+
+    private func deleteMDMConcurrently(_ workItems: [MDMDeletionWorkItem]) async
+      -> [OperationFailure]
+    {
+      await withTaskGroup(of: OperationFailure?.self) { group in
+        for item in workItems {
+          group.addTask {
+            do {
+              try await MDMDeletionService.delete(item.request)
+              return nil
+            } catch {
+              return OperationFailure(id: item.id, message: error.localizedDescription)
+            }
+          }
+        }
+
+        var failures: [OperationFailure] = []
+        for await failure in group {
+          if let failure {
+            failures.append(failure)
+          }
+        }
+        return failures
       }
     }
 
@@ -422,17 +500,32 @@ import SwiftUI
 
   private enum OperationStatus: Equatable {
     case pending
-    case processing
     case success
     case failed
     case skipped
   }
 
   private struct BulkOperationItem: Identifiable {
-    var id: PersistentIdentifier
+    var id: String
     let device: Device
     var status: OperationStatus
     var details: String?
+  }
+
+  private struct SnipeStatusWorkItem {
+    let id: String
+    let assetId: Int
+    let wasAssigned: Bool
+  }
+
+  private struct MDMDeletionWorkItem {
+    let id: String
+    let request: MDMDeletionService.Request
+  }
+
+  private struct OperationFailure {
+    let id: String
+    let message: String
   }
 
   private struct SnipeStatusAction: Identifiable {

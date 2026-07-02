@@ -15,7 +15,6 @@ enum AppTab: Hashable, Identifiable {
   #if os(iOS)
     case bulkScanner
   #endif
-  case settings
 
   var id: Self {
     self
@@ -29,7 +28,6 @@ enum AppTab: Hashable, Identifiable {
       case .salePreparation: return "Sale"
       case .deviceDeduplication: return "Dedupe"
       case .bulkScanner: return "Bulk Scanner"
-      case .settings: return "Settings"
       }
     #else
       switch self {
@@ -37,7 +35,6 @@ enum AppTab: Hashable, Identifiable {
       case .returnCheckIn: return "Return Check-In"
       case .salePreparation: return "Sale Preparation"
       case .deviceDeduplication: return "Device Deduplication"
-      case .settings: return "Settings"
       }
     #endif
   }
@@ -51,7 +48,6 @@ enum AppTab: Hashable, Identifiable {
     #if os(iOS)
       case .bulkScanner: "camera.viewfinder"
     #endif
-    case .settings: "gear"
     }
   }
 }

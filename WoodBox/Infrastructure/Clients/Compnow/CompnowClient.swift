@@ -10,12 +10,7 @@ import Foundation
 struct CompnowClient {
   // MARK: - Properties
 
-  #if DEBUG
-    private static let baseURL = URL(string: "https://test-api.compnow.com.au/request")!
-  #else
-    private static let baseURL = URL(string: "https://prod-api.compnow.com.au/request")!
-  #endif
-
+  private static let baseURL = URL(string: "https://prod-api.compnow.com.au/request")!
   private let apiKey: String
   private let username: String
   private let password: String

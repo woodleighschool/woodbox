@@ -12,89 +12,172 @@ struct ToolsSplitView: View {
   // MARK: - Properties
 
   @Environment(ModelData.self) private var modelData
+  #if os(iOS)
+    @State private var isSettingsSheetPresented = false
+  #endif
+
+  private var workflowTabs: [AppTab] {
+    [
+      .repairIntake,
+      .returnCheckIn,
+      .salePreparation,
+    ]
+  }
+
+  private var utilityTabs: [AppTab] {
+    var tabs: [AppTab] = [
+      .deviceDeduplication,
+    ]
+
+    #if os(iOS)
+      tabs.append(.bulkScanner)
+    #endif
+
+    return tabs
+  }
+
+  private var navigationTabs: [AppTab] {
+    workflowTabs + utilityTabs
+  }
 
   // MARK: - Body
 
   var body: some View {
-    @Bindable var modelData = modelData
-
-    TabView(selection: $modelData.selectedTab) {
-      // Primary tabs
-      Tab(
-        AppTab.repairIntake.title, systemImage: AppTab.repairIntake.symbol,
-        value: AppTab.repairIntake
-      ) {
-        NavigationStack {
-          RepairIntakeView(deviceSelection: modelData.deviceSelection)
-            .navigationTitle("Repair Intake")
-        }
-      }
-
-      Tab(
-        AppTab.returnCheckIn.title, systemImage: AppTab.returnCheckIn.symbol,
-        value: AppTab.returnCheckIn
-      ) {
-        NavigationStack {
-          ReturnCheckInView(deviceSelection: modelData.deviceSelection)
-            .navigationTitle("Return Check-In")
-        }
-      }
-
-      Tab(
-        AppTab.salePreparation.title,
-        systemImage: AppTab.salePreparation.symbol,
-        value: AppTab.salePreparation
-      ) {
-        NavigationStack {
-          SalePreparationView(deviceSelection: modelData.deviceSelection)
-            .navigationTitle("Sale Preparation")
-        }
-      }
-
-      Tab(
-        AppTab.deviceDeduplication.title,
-        systemImage: AppTab.deviceDeduplication.symbol,
-        value: AppTab.deviceDeduplication
-      ) {
-        NavigationStack {
-          DeviceDeduplicationView()
-            .navigationTitle("Device Deduplication")
-        }
-      }
-
-      #if os(iOS)
-        Tab(
-          AppTab.bulkScanner.title, systemImage: AppTab.bulkScanner.symbol,
-          value: AppTab.bulkScanner
-        ) {
-          NavigationStack {
-            BulkScannerView()
-          }
-        }
-
-        Tab(
-          AppTab.settings.title, systemImage: AppTab.settings.symbol, value: AppTab.settings
-        ) {
-          NavigationStack {
-            SettingsView()
-              .navigationTitle("Settings")
-              .toolbar {
-                ToolbarItem(placement: .automatic) {
-                  CacheRefreshButton()
-                }
-              }
-          }
-        }
-      #endif
-    }
-    .tabViewStyle(.sidebarAdaptable)
-    #if os(macOS)
-      .toolbar {
-        // Want this in the sidebar, seems to be no way to do this again...?
-        ToolbarItem(placement: .navigation) {
-          CacheRefreshButton()
-        }
-      }
+    #if os(iOS)
+      iOSToolsView
+    #else
+      macOSToolsView
     #endif
   }
+
+  #if os(iOS)
+    private var iOSToolsView: some View {
+      NavigationStack {
+        List {
+          Section("Workflows") {
+            ForEach(workflowTabs) { tab in
+              NavigationLink(value: tab) {
+                Label(tab.title, systemImage: tab.symbol)
+              }
+            }
+          }
+
+          Section("Utilities") {
+            ForEach(utilityTabs) { tab in
+              NavigationLink(value: tab) {
+                Label(tab.title, systemImage: tab.symbol)
+              }
+            }
+          }
+        }
+        .navigationTitle("Tools")
+        .toolbar {
+          ToolbarItem(placement: .primaryAction) {
+            SettingsButton {
+              isSettingsSheetPresented = true
+            }
+          }
+        }
+        .navigationDestination(for: AppTab.self) { tab in
+          toolContent(for: tab)
+            .navigationTitle(tab.title)
+        }
+      }
+      .sheet(isPresented: $isSettingsSheetPresented) {
+        settingsSheet
+      }
+    }
+  #else
+  private var macOSToolsView: some View {
+    @Bindable var modelData = modelData
+
+    let selectedTab = Binding<AppTab?>(
+      get: {
+        navigationTabs.contains(modelData.selectedTab) ? modelData.selectedTab : nil
+      },
+      set: { newValue in
+        if let newValue {
+          modelData.selectedTab = newValue
+        }
+      }
+    )
+
+    return NavigationSplitView {
+      List(selection: selectedTab) {
+        Section("Workflows") {
+          ForEach(workflowTabs) { tab in
+            Label(tab.title, systemImage: tab.symbol)
+              .tag(tab)
+          }
+        }
+
+        Section("Utilities") {
+          ForEach(utilityTabs) { tab in
+            Label(tab.title, systemImage: tab.symbol)
+              .tag(tab)
+          }
+        }
+      }
+      .navigationTitle("Tools")
+    } detail: {
+      NavigationStack {
+        toolContent(for: modelData.selectedTab)
+          .navigationTitle(modelData.selectedTab.title)
+      }
+    }
+  }
+  #endif
+
+  @ViewBuilder
+  private func toolContent(for tab: AppTab) -> some View {
+    switch tab {
+    case .repairIntake:
+      RepairIntakeView(deviceSelection: modelData.deviceSelection)
+
+    case .returnCheckIn:
+      ReturnCheckInView(deviceSelection: modelData.deviceSelection)
+
+    case .salePreparation:
+      SalePreparationView(deviceSelection: modelData.deviceSelection)
+
+    case .deviceDeduplication:
+      DeviceDeduplicationView()
+
+    #if os(iOS)
+      case .bulkScanner:
+        BulkScannerView()
+    #endif
+    }
+  }
+
+  #if os(iOS)
+    private var settingsSheet: some View {
+      NavigationStack {
+        SettingsView()
+          .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+              Button("Done") {
+                isSettingsSheetPresented = false
+              }
+            }
+          }
+      }
+    }
+  #endif
 }
+
+#if os(iOS)
+  private struct SettingsButton: View {
+    let action: () -> Void
+
+    var body: some View {
+      Button(action: action) {
+        Image(systemName: "gearshape")
+          .font(.title2)
+          .symbolRenderingMode(.hierarchical)
+      }
+      .accessibilityLabel("Open settings")
+      .buttonStyle(.plain)
+    }
+  }
+#endif

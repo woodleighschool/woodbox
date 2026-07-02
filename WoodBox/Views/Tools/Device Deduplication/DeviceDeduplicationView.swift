@@ -19,35 +19,29 @@ struct DeviceDeduplicationView: View {
 
   @State private var pendingDeletion: (record: MDMRecord, device: Device)?
   @State private var alertItem: AlertItem?
-  @State private var isProcessing = false
 
   // MARK: - Body
 
   var body: some View {
-    Group {
+    List {
       if duplicates.isEmpty {
         ContentUnavailableView(
           "No Duplicates",
           systemImage: "checkmark.circle",
           description: Text("No devices found with multiple MDM records.")
         )
+        .frame(maxWidth: .infinity)
+        .listRowBackground(Color.clear)
       } else {
-        List {
-          ForEach(duplicates, id: \.serial) { device in
-            DuplicateGroupSection(device: device, settings: modelData.settings) { record in
-              pendingDeletion = (record, device)
-            }
+        ForEach(duplicates, id: \.serial) { device in
+          DuplicateGroupSection(device: device, settings: modelData.settings) { record in
+            pendingDeletion = (record, device)
           }
         }
       }
     }
-    .overlay {
-      if isProcessing {
-        ProgressView()
-          .padding()
-          .background(.regularMaterial)
-          .clipShape(RoundedRectangle(cornerRadius: 8))
-      }
+    .refreshable {
+      await modelData.cacheManager.sync()
     }
     .alert(
       "Confirm Deletion",
@@ -77,20 +71,15 @@ struct DeviceDeduplicationView: View {
   // MARK: - Private Methods
 
   private func delete(_ record: MDMRecord, from device: Device) async {
-    guard !isProcessing else { return }
-    isProcessing = true
-    defer {
-      isProcessing = false
-      pendingDeletion = nil
-    }
+    pendingDeletion = nil
+    let requests = MDMDeletionService.remove(
+      records: [record],
+      from: device,
+      modelContext: modelContext
+    )
 
-    do {
-      try await MDMDeletionService.deleteAndRemove(
-        record: record,
-        from: device,
-        modelContext: modelContext
-      )
-    } catch {
+    let errors = await MDMDeletionService.delete(requests)
+    if let error = errors.first {
       alertItem = .error(error)
     }
   }
