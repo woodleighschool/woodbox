@@ -33,9 +33,6 @@ struct DeviceDeduplicationView: View {
         }
       }
     }
-    .refreshable {
-      await modelData.cacheManager.sync()
-    }
     .alert(
       "Confirm Deletion",
       isPresented: Binding(
@@ -123,17 +120,6 @@ struct DuplicateRecordRow: View {
 
   var body: some View {
     HStack(spacing: 16) {
-      ZStack(alignment: .topTrailing) {
-        Image(record.provider.rawValue.lowercased())
-          .resizable()
-          .scaledToFit()
-          .frame(width: 24, height: 24)
-
-        if isLatest {
-          PingBadge().offset(x: 2, y: -2)
-        }
-      }
-
       VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 6) {
           DeviceNameText(name: record.deviceName)
@@ -144,15 +130,23 @@ struct DuplicateRecordRow: View {
             .font(.caption.monospaced())
             .foregroundStyle(.secondary)
             .lineLimit(1)
+
+          if isLatest {
+            PingBadge()
+          }
         }
 
-        if let date = record.lastCheckIn {
-          Text(
-            "Last seen \(date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)))"
-          )
-          .font(.caption)
-          .foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+          Label(record.provider.rawValue, systemImage: "server.rack")
+
+          if let date = record.lastCheckIn {
+            Text(
+              "Last seen \(date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)))"
+            )
+          }
         }
+        .font(.caption)
+        .foregroundStyle(.secondary)
       }
     }
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {

@@ -45,9 +45,6 @@ struct RepairIntakeView: View {
       .formStyle(.grouped)
       .deviceSearch(selection: deviceSelection)
       .scrollDismissesKeyboard(.interactively)
-      .refreshable {
-        await modelData.cacheManager.sync()
-      }
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           if isSubmitting {
@@ -138,9 +135,7 @@ struct RepairIntakeView: View {
           Label {
             Text("Create Compnow Ticket")
           } icon: {
-            Image("compnow")
-              .resizable()
-              .scaledToFit()
+            Image(systemName: "wrench.and.screwdriver")
           }
         }
       }
@@ -150,9 +145,7 @@ struct RepairIntakeView: View {
           Label {
             Text("Create Freshservice Ticket")
           } icon: {
-            Image("freshservice")
-              .resizable()
-              .scaledToFit()
+            Image(systemName: "ticket")
           }
         }
         .disabled(!canCreateFreshserviceTicket)
@@ -163,9 +156,7 @@ struct RepairIntakeView: View {
           Label {
             Text("Checkout Spare to End User")
           } icon: {
-            Image("snipeit")
-              .resizable()
-              .scaledToFit()
+            Image(systemName: "shippingbox")
           }
         }
         .disabled(!canCheckoutSpare)

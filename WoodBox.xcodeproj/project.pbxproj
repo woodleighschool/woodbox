@@ -6,9 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		D20000072F50000000B46051 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 41D603BA2F38277800B46051 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 41D603C12F38277800B46051;
+			remoteInfo = WoodBox;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		41D603C22F38277800B46051 /* WoodBox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WoodBox.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D10000012F40000000B46051 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
+		D20000012F50000000B46051 /* WoodBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WoodBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -17,10 +28,22 @@
 			path = WoodBox;
 			sourceTree = "<group>";
 		};
+		D20000022F50000000B46051 /* WoodBoxTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WoodBoxTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		41D603BF2F38277800B46051 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D20000032F50000000B46051 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -34,6 +57,7 @@
 			isa = PBXGroup;
 			children = (
 				41D603C42F38277800B46051 /* WoodBox */,
+				D20000022F50000000B46051 /* WoodBoxTests */,
 				D10000022F40000000B46051 /* Config */,
 				41D603C32F38277800B46051 /* Products */,
 			);
@@ -43,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				41D603C22F38277800B46051 /* WoodBox.app */,
+				D20000012F50000000B46051 /* WoodBoxTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -80,6 +105,29 @@
 			productReference = 41D603C22F38277800B46051 /* WoodBox.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D20000062F50000000B46051 /* WoodBoxTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D200000B2F50000000B46051 /* Build configuration list for PBXNativeTarget "WoodBoxTests" */;
+			buildPhases = (
+				D20000042F50000000B46051 /* Sources */,
+				D20000032F50000000B46051 /* Frameworks */,
+				D20000052F50000000B46051 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D20000082F50000000B46051 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D20000022F50000000B46051 /* WoodBoxTests */,
+			);
+			name = WoodBoxTests;
+			packageProductDependencies = (
+			);
+			productName = WoodBoxTests;
+			productReference = D20000012F50000000B46051 /* WoodBoxTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -92,6 +140,10 @@
 				TargetAttributes = {
 					41D603C12F38277800B46051 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					D20000062F50000000B46051 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 41D603C12F38277800B46051;
 					};
 				};
 			};
@@ -112,12 +164,20 @@
 			projectRoot = "";
 			targets = (
 				41D603C12F38277800B46051 /* WoodBox */,
+				D20000062F50000000B46051 /* WoodBoxTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		41D603C02F38277800B46051 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D20000052F50000000B46051 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -134,7 +194,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D20000042F50000000B46051 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D20000082F50000000B46051 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 41D603C12F38277800B46051 /* WoodBox */;
+			targetProxy = D20000072F50000000B46051 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		41D603CD2F38277900B46051 /* Debug */ = {
@@ -393,6 +468,42 @@
 			};
 			name = Release;
 		};
+		D20000092F50000000B46051 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = SMLKBTR495;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = au.edu.vic.woodleigh.WoodBoxTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WoodBox.app/Contents/MacOS/WoodBox";
+			};
+			name = Debug;
+		};
+		D200000A2F50000000B46051 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = SMLKBTR495;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = au.edu.vic.woodleigh.WoodBoxTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WoodBox.app/Contents/MacOS/WoodBox";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -410,6 +521,15 @@
 			buildConfigurations = (
 				41D603D02F38277900B46051 /* Debug */,
 				41D603D12F38277900B46051 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D200000B2F50000000B46051 /* Build configuration list for PBXNativeTarget "WoodBoxTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D20000092F50000000B46051 /* Debug */,
+				D200000A2F50000000B46051 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -14,6 +14,7 @@ Open `WoodBox.xcodeproj` in Xcode and use the shared `WoodBox` scheme, or instal
 mise install
 mise run fmt-check
 mise run lint
+mise run test
 mise run build
 mise run workflow-lint
 ```

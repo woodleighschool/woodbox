@@ -13,6 +13,8 @@ final class CacheManager {
     case failed(message: String, date: Date?)
   }
 
+  static let automaticSyncInterval: TimeInterval = 5 * 60
+
   // MARK: - Properties
 
   var status: Status = .synced(date: nil)
@@ -41,6 +43,11 @@ final class CacheManager {
   }
 
   // MARK: - Public Methods
+
+  func syncIfNeeded(now: Date = .now) async {
+    guard Self.shouldAutomaticallySync(lastSyncDate: lastSyncDate, now: now) else { return }
+    await sync()
+  }
 
   func sync() async {
     guard !isSyncing else { return }
@@ -105,6 +112,11 @@ final class CacheManager {
     } catch {
       status = .failed(message: error.localizedDescription, date: Date())
     }
+  }
+
+  static func shouldAutomaticallySync(lastSyncDate: Date?, now: Date) -> Bool {
+    guard let lastSyncDate else { return true }
+    return now.timeIntervalSince(lastSyncDate) >= automaticSyncInterval
   }
 
   // MARK: - Fetchers

@@ -51,9 +51,6 @@ struct SalePreparationView: View {
       .formStyle(.grouped)
       .deviceSearch(selection: deviceSelection)
       .scrollDismissesKeyboard(.interactively)
-      .refreshable {
-        await modelData.cacheManager.sync()
-      }
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           if isSubmitting {

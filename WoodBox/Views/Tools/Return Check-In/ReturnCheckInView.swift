@@ -58,9 +58,6 @@ struct ReturnCheckInView: View {
       .formStyle(.grouped)
       .deviceSearch(selection: deviceSelection)
       .scrollDismissesKeyboard(.interactively)
-      .refreshable {
-        await modelData.cacheManager.sync()
-      }
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           if isSubmitting {
@@ -166,9 +163,7 @@ struct ReturnCheckInView: View {
           Label {
             Text("Create Service Request")
           } icon: {
-            Image("freshservice")
-              .resizable()
-              .scaledToFit()
+            Image(systemName: "ticket")
           }
         }
         .disabled(!canCreateFreshserviceRequest)

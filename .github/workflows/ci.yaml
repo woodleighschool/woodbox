@@ -82,6 +82,9 @@ jobs:
       - name: Run linters
         run: mise run lint
 
+      - name: Run tests
+        run: mise run test
+
       - name: Build app for macOS
         run: mise run build
 

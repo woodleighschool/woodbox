@@ -74,9 +74,6 @@ import SwiftUI
     var body: some View {
       reviewContent
         .navigationTitle("Bulk Scanner")
-        .refreshable {
-          await modelData.cacheManager.sync()
-        }
         .toolbar { toolbarContent }
         .confirmationDialog("Clear all scanned devices?", isPresented: $showClearConfirmation) {
           Button("Clear All", role: .destructive, action: clearHistory)

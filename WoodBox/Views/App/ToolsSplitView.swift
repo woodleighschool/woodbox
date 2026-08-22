@@ -5,6 +5,7 @@ struct ToolsSplitView: View {
   // MARK: - Properties
 
   @Environment(ModelData.self) private var modelData
+  @Environment(\.scenePhase) private var scenePhase
   #if os(iOS)
     @State private var isSettingsSheetPresented = false
   #endif
@@ -32,11 +33,17 @@ struct ToolsSplitView: View {
   // MARK: - Body
 
   var body: some View {
-    #if os(iOS)
-      iOSToolsView
-    #else
-      macOSToolsView
-    #endif
+    Group {
+      #if os(iOS)
+        iOSToolsView
+      #else
+        macOSToolsView
+      #endif
+    }
+    .task(id: scenePhase) {
+      guard scenePhase == .active else { return }
+      await modelData.cacheManager.syncIfNeeded()
+    }
   }
 
   #if os(iOS)
@@ -60,6 +67,9 @@ struct ToolsSplitView: View {
           }
         }
         .navigationTitle("Tools")
+        .refreshable {
+          await refreshCache()
+        }
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
             SettingsButton {
@@ -70,11 +80,18 @@ struct ToolsSplitView: View {
         .navigationDestination(for: AppTab.self) { tab in
           toolContent(for: tab)
             .navigationTitle(tab.title)
+            .refreshable {
+              await refreshCache()
+            }
         }
       }
       .sheet(isPresented: $isSettingsSheetPresented) {
         settingsSheet
       }
+    }
+
+    private func refreshCache() async {
+      await modelData.cacheManager.sync()
     }
   #else
     private var navigationTabs: [AppTab] {
@@ -116,6 +133,11 @@ struct ToolsSplitView: View {
         NavigationStack {
           toolContent(for: modelData.selectedTab)
             .navigationTitle(modelData.selectedTab.title)
+        }
+      }
+      .toolbar {
+        ToolbarItem(placement: .primaryAction) {
+          CacheRefreshButton()
         }
       }
     }

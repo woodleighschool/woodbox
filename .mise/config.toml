@@ -14,11 +14,11 @@ lockfile = true
 
 [tasks.format]
 description = "Format Swift code"
-run = "swiftformat WoodBox"
+run = "swiftformat WoodBox WoodBoxTests"
 
 [tasks.fmt-check]
 description = "Check Swift formatting"
-run = "swiftformat WoodBox --lint"
+run = "swiftformat WoodBox WoodBoxTests --lint"
 
 [tasks.build]
 description = "Build the unsigned macOS app"
@@ -27,6 +27,16 @@ xcodebuild build \
   -project WoodBox.xcodeproj \
   -scheme WoodBox \
   -destination 'generic/platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO
+"""
+
+[tasks.test]
+description = "Run focused Swift tests"
+run = """
+xcodebuild test \
+  -project WoodBox.xcodeproj \
+  -scheme WoodBox \
+  -destination 'platform=macOS' \
   CODE_SIGNING_ALLOWED=NO
 """
 

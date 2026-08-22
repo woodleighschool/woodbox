@@ -1,0 +1,52 @@
+import SwiftData
+import Testing
+@testable import WoodBox
+
+@Suite("MDM deletion")
+@MainActor
+struct MDMDeletionServiceTests {
+  @Test("removing a record preserves the remote deletion request")
+  func removesLocalRecord() throws {
+    let schema = Schema([Device.self, MDMRecord.self])
+    let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try ModelContainer(for: schema, configurations: configuration)
+    let context = ModelContext(container)
+
+    let device = Device(serial: "SERIAL-001", assetTag: "ASSET-001", model: "MacBook Air")
+    let jamfRecord = MDMRecord(
+      provider: .jamf,
+      deviceId: "101",
+      deviceName: "macbook-001",
+      lastCheckIn: nil,
+      jamfDeviceType: .computer,
+      device: device
+    )
+    let intuneRecord = MDMRecord(
+      provider: .intune,
+      deviceId: "202",
+      deviceName: "macbook-001",
+      lastCheckIn: nil,
+      jamfDeviceType: nil,
+      device: device
+    )
+    device.mdmRecords = [jamfRecord, intuneRecord]
+    context.insert(device)
+    try context.save()
+
+    let requests = MDMDeletionService.remove(
+      records: [jamfRecord],
+      from: device,
+      modelContext: context
+    )
+
+    let request = try #require(requests.first)
+    #expect(requests.count == 1)
+    #expect(request.provider == .jamf)
+    #expect(request.deviceId == "101")
+    #expect(request.jamfDeviceType == .computer)
+    #expect(device.mdmRecords.map(\.id) == [intuneRecord.id])
+
+    let persistedRecords = try context.fetch(FetchDescriptor<MDMRecord>())
+    #expect(persistedRecords.map(\.id) == [intuneRecord.id])
+  }
+}
