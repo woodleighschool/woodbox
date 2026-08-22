@@ -17,13 +17,6 @@ import SwiftUI
       case .serial: "serial number"
       }
     }
-
-    var badgeSymbol: String {
-      switch self {
-      case .assetTag: "barcode"
-      case .serial: "text.viewfinder"
-      }
-    }
   }
 
   // MARK: - Extensions

@@ -29,10 +29,6 @@ struct ToolsSplitView: View {
     return tabs
   }
 
-  private var navigationTabs: [AppTab] {
-    workflowTabs + utilityTabs
-  }
-
   // MARK: - Body
 
   var body: some View {
@@ -81,44 +77,48 @@ struct ToolsSplitView: View {
       }
     }
   #else
-  private var macOSToolsView: some View {
-    @Bindable var modelData = modelData
+    private var navigationTabs: [AppTab] {
+      workflowTabs + utilityTabs
+    }
 
-    let selectedTab = Binding<AppTab?>(
-      get: {
-        navigationTabs.contains(modelData.selectedTab) ? modelData.selectedTab : nil
-      },
-      set: { newValue in
-        if let newValue {
-          modelData.selectedTab = newValue
-        }
-      }
-    )
+    private var macOSToolsView: some View {
+      @Bindable var modelData = modelData
 
-    return NavigationSplitView {
-      List(selection: selectedTab) {
-        Section("Workflows") {
-          ForEach(workflowTabs) { tab in
-            Label(tab.title, systemImage: tab.symbol)
-              .tag(tab)
+      let selectedTab = Binding<AppTab?>(
+        get: {
+          navigationTabs.contains(modelData.selectedTab) ? modelData.selectedTab : nil
+        },
+        set: { newValue in
+          if let newValue {
+            modelData.selectedTab = newValue
           }
         }
+      )
 
-        Section("Utilities") {
-          ForEach(utilityTabs) { tab in
-            Label(tab.title, systemImage: tab.symbol)
-              .tag(tab)
+      return NavigationSplitView {
+        List(selection: selectedTab) {
+          Section("Workflows") {
+            ForEach(workflowTabs) { tab in
+              Label(tab.title, systemImage: tab.symbol)
+                .tag(tab)
+            }
+          }
+
+          Section("Utilities") {
+            ForEach(utilityTabs) { tab in
+              Label(tab.title, systemImage: tab.symbol)
+                .tag(tab)
+            }
           }
         }
-      }
-      .navigationTitle("Tools")
-    } detail: {
-      NavigationStack {
-        toolContent(for: modelData.selectedTab)
-          .navigationTitle(modelData.selectedTab.title)
+        .navigationTitle("Tools")
+      } detail: {
+        NavigationStack {
+          toolContent(for: modelData.selectedTab)
+            .navigationTitle(modelData.selectedTab.title)
+        }
       }
     }
-  }
   #endif
 
   @ViewBuilder
