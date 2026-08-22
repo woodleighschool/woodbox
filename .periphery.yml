@@ -1,3 +1,4 @@
 project: WoodBox.xcodeproj
 schemes:
-- WoodBox
+  - WoodBox
+retain_codable_properties: true
