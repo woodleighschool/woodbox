@@ -403,7 +403,9 @@ private struct ConnectionTestRow: View {
       Button("Test Connection") { Task { await runTest() } }
         .disabled(isTesting || disabled)
 
-      if isTesting { ProgressView().controlSize(.small) }
+      if isTesting {
+        ProgressView().controlSize(.small)
+      }
 
       switch testResult {
       case .success:

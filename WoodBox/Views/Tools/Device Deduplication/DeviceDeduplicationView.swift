@@ -39,7 +39,11 @@ struct DeviceDeduplicationView: View {
     .alert(
       "Confirm Deletion",
       isPresented: Binding(
-        get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }
+        get: { pendingDeletion != nil }, set: {
+          if !$0 {
+            pendingDeletion = nil
+          }
+        }
       )
     ) {
       Button("Delete", role: .destructive) {
@@ -125,7 +129,9 @@ struct DuplicateRecordRow: View {
           .scaledToFit()
           .frame(width: 24, height: 24)
 
-        if isLatest { PingBadge().offset(x: 2, y: -2) }
+        if isLatest {
+          PingBadge().offset(x: 2, y: -2)
+        }
       }
 
       VStack(alignment: .leading, spacing: 4) {

@@ -40,7 +40,9 @@ struct JamfClient {
       let response = try await fetchJamfComputersPage(page: page, pageSize: pageSize)
       allComputers.append(contentsOf: response.results)
 
-      if response.results.count < pageSize { break }
+      if response.results.count < pageSize {
+        break
+      }
       page += 1
     }
 
@@ -56,7 +58,9 @@ struct JamfClient {
       let response = try await fetchJamfMobileDevicesPage(page: page, pageSize: pageSize)
       allDevices.append(contentsOf: response.results)
 
-      if response.results.count < pageSize { break }
+      if response.results.count < pageSize {
+        break
+      }
       page += 1
     }
 

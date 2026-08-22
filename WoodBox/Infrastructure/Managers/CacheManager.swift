@@ -18,7 +18,9 @@ final class CacheManager {
   var status: Status = .synced(date: nil)
 
   var isSyncing: Bool {
-    if case .syncing = status { return true }
+    if case .syncing = status {
+      return true
+    }
     return false
   }
 
