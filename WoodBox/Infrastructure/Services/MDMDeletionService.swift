@@ -1,10 +1,3 @@
-//
-//  MDMDeletionService.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 10/2/2026.
-//
-
 import Foundation
 import SwiftData
 

@@ -1,10 +1,3 @@
-//
-//  DeviceNameText.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 21/2/2026.
-//
-
 import SwiftUI
 
 struct DeviceNameText: View {

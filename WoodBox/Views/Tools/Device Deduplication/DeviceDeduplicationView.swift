@@ -1,10 +1,3 @@
-//
-//  DeviceDeduplicationView.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 17/2/2026.
-//
-
 import SwiftData
 import SwiftUI
 

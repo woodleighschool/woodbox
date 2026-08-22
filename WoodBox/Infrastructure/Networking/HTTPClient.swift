@@ -1,10 +1,3 @@
-//
-//  HTTPClient.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 8/2/2026.
-//
-
 import Foundation
 
 struct HTTPClient {

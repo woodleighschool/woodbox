@@ -1,10 +1,3 @@
-//
-//  DeviceCard.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 9/2/2026.
-//
-
 import SwiftUI
 
 // MARK: - DeviceSummaryItem

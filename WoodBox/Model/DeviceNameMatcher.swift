@@ -1,10 +1,3 @@
-//
-//  DeviceNameMatcher.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 13/5/2026.
-//
-
 import Foundation
 
 enum DeviceNameMatcher {

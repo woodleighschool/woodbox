@@ -1,10 +1,3 @@
-//
-//  ModelData.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 18/2/2026.
-//
-
 import SwiftData
 import SwiftUI
 

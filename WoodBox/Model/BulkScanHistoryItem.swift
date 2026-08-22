@@ -1,10 +1,3 @@
-//
-//  BulkScanHistoryItem.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 28/2/2026.
-//
-
 #if os(iOS)
   import Foundation
   import SwiftData

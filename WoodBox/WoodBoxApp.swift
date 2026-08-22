@@ -1,10 +1,3 @@
-//
-//  WoodBoxApp.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 8/2/2026.
-//
-
 import SwiftData
 import SwiftUI
 

@@ -1,10 +1,3 @@
-//
-//  AppTabs.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 21/2/2026.
-//
-
 import SwiftUI
 
 enum AppTab: Hashable, Identifiable {

@@ -1,10 +1,3 @@
-//
-//  BulkScannerView.swift
-//  WoodBox
-//
-//  Created by Alexander Hyde on 27/2/2026.
-//
-
 import SwiftData
 import SwiftUI
 
