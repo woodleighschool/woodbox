@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E10000012F50000000B46051 /* SimpleKeychain in Frameworks */ = {isa = PBXBuildFile; productRef = E10000022F50000000B46051 /* SimpleKeychain */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D20000072F50000000B46051 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -40,6 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E10000012F50000000B46051 /* SimpleKeychain in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +105,7 @@
 			);
 			name = WoodBox;
 			packageProductDependencies = (
+				E10000022F50000000B46051 /* SimpleKeychain */,
 			);
 			productName = WoodBox;
 			productReference = 41D603C22F38277800B46051 /* WoodBox.app */;
@@ -157,6 +163,7 @@
 			mainGroup = 41D603B92F38277800B46051;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				E10000032F50000000B46051 /* XCRemoteSwiftPackageReference "SimpleKeychain" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 41D603C32F38277800B46051 /* Products */;
@@ -350,6 +357,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				AUTOMATION_APPLE_EVENTS = NO;
+				CODE_SIGN_ENTITLEMENTS = WoodBox/WoodBox.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -413,6 +421,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				AUTOMATION_APPLE_EVENTS = NO;
+				CODE_SIGN_ENTITLEMENTS = WoodBox/WoodBox.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -535,6 +544,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E10000032F50000000B46051 /* XCRemoteSwiftPackageReference "SimpleKeychain" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/auth0/SimpleKeychain";
+			requirement = {
+				kind = exactVersion;
+				version = 1.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E10000022F50000000B46051 /* SimpleKeychain */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E10000032F50000000B46051 /* XCRemoteSwiftPackageReference "SimpleKeychain" */;
+			productName = SimpleKeychain;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 41D603BA2F38277800B46051 /* Project object */;
 }
