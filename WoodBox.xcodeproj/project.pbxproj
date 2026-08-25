@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 100;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -42,18 +42,14 @@
 /* Begin PBXFrameworksBuildPhase section */
 		41D603BF2F38277800B46051 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				E10000012F50000000B46051 /* SimpleKeychain in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D20000032F50000000B46051 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -98,8 +94,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			fileSystemSynchronizedGroups = (
 				41D603C42F38277800B46051 /* WoodBox */,
 			);
@@ -128,8 +122,6 @@
 				D20000022F50000000B46051 /* WoodBoxTests */,
 			);
 			name = WoodBoxTests;
-			packageProductDependencies = (
-			);
 			productName = WoodBoxTests;
 			productReference = D20000012F50000000B46051 /* WoodBoxTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -165,7 +157,7 @@
 			packageReferences = (
 				E10000032F50000000B46051 /* XCRemoteSwiftPackageReference "SimpleKeychain" */,
 			);
-			preferredProjectObjectVersion = 77;
+			preferredProjectObjectVersion = 100;
 			productRefGroup = 41D603C32F38277800B46051 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -179,34 +171,26 @@
 /* Begin PBXResourcesBuildPhase section */
 		41D603C02F38277800B46051 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D20000052F50000000B46051 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		41D603BE2F38277800B46051 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D20000042F50000000B46051 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -219,7 +203,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		41D603CD2F38277900B46051 /* Debug */ = {
+		41D603CD2F38277900B46051 /* Debug configuration for PBXProject "WoodBox" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
@@ -288,7 +272,7 @@
 			};
 			name = Debug;
 		};
-		41D603CE2F38277900B46051 /* Release */ = {
+		41D603CE2F38277900B46051 /* Release configuration for PBXProject "WoodBox" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
@@ -349,7 +333,7 @@
 			};
 			name = Release;
 		};
-		41D603D02F38277900B46051 /* Debug */ = {
+		41D603D02F38277900B46051 /* Debug configuration for PBXNativeTarget "WoodBox" */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D10000012F40000000B46051 /* Version.xcconfig */;
 			buildSettings = {
@@ -413,7 +397,7 @@
 			};
 			name = Debug;
 		};
-		41D603D12F38277900B46051 /* Release */ = {
+		41D603D12F38277900B46051 /* Release configuration for PBXNativeTarget "WoodBox" */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D10000012F40000000B46051 /* Version.xcconfig */;
 			buildSettings = {
@@ -477,7 +461,7 @@
 			};
 			name = Release;
 		};
-		D20000092F50000000B46051 /* Debug */ = {
+		D20000092F50000000B46051 /* Debug configuration for PBXNativeTarget "WoodBoxTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -495,7 +479,7 @@
 			};
 			name = Debug;
 		};
-		D200000A2F50000000B46051 /* Release */ = {
+		D200000A2F50000000B46051 /* Release configuration for PBXNativeTarget "WoodBoxTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -519,28 +503,25 @@
 		41D603BD2F38277800B46051 /* Build configuration list for PBXProject "WoodBox" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				41D603CD2F38277900B46051 /* Debug */,
-				41D603CE2F38277900B46051 /* Release */,
+				41D603CD2F38277900B46051 /* Debug configuration for PBXProject "WoodBox" */,
+				41D603CE2F38277900B46051 /* Release configuration for PBXProject "WoodBox" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		41D603CF2F38277900B46051 /* Build configuration list for PBXNativeTarget "WoodBox" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				41D603D02F38277900B46051 /* Debug */,
-				41D603D12F38277900B46051 /* Release */,
+				41D603D02F38277900B46051 /* Debug configuration for PBXNativeTarget "WoodBox" */,
+				41D603D12F38277900B46051 /* Release configuration for PBXNativeTarget "WoodBox" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		D200000B2F50000000B46051 /* Build configuration list for PBXNativeTarget "WoodBoxTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D20000092F50000000B46051 /* Debug */,
-				D200000A2F50000000B46051 /* Release */,
+				D20000092F50000000B46051 /* Debug configuration for PBXNativeTarget "WoodBoxTests" */,
+				D200000A2F50000000B46051 /* Release configuration for PBXNativeTarget "WoodBoxTests" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
@@ -565,4 +546,5 @@
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 41D603BA2F38277800B46051 /* Project object */;
+	validationLevel = 1;
 }
