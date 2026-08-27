@@ -1,10 +1,15 @@
 # WoodBox
 
+[![Release](https://img.shields.io/github/v/release/woodleighschool/WoodBox?display_name=tag&sort=semver)](https://github.com/woodleighschool/WoodBox/releases/latest)
+[![CI](https://github.com/woodleighschool/WoodBox/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/woodleighschool/WoodBox/actions/workflows/ci.yaml)
+![macOS and iOS 26+](https://img.shields.io/badge/macOS%20%7C%20iOS-26%2B-000000?logo=apple&logoColor=white)
+[![License](https://img.shields.io/github/license/woodleighschool/WoodBox)](https://github.com/woodleighschool/WoodBox/blob/main/LICENSE)
+
 Native iOS and macOS tool for repair intake, return check-in, sale preparation, bulk scanning, and device administration.
 
 ## 🚀 Usage
 
-Choose a workflow from the sidebar, then scan or search for a device. Configure service connections and workflow defaults in Settings.
+The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP. Extract it, open WoodBox, then choose a workflow from the sidebar and scan or search for a device. Service connections and workflow defaults live in Settings.
 
 ## 🧑‍💻 Development
 
@@ -18,12 +23,6 @@ mise run test
 mise run build
 mise run workflow-lint
 ```
-
-`mise run build` builds the unsigned macOS app. iOS builds remain in Xcode and App Store Connect.
-
-## 📦 Releases
-
-Numeric releases publish a signed and notarized `WoodBox-<version>.zip` for macOS. We distribute iOS builds through App Store Connect as a private Custom App.
 
 ## 📄 License
 
