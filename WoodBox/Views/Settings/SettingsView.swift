@@ -52,46 +52,50 @@ struct SettingsView: View {
   var body: some View {
     #if os(macOS)
       TabView {
-        settingsDestination(.snipeIt)
-          .tabItem {
-            Label(SettingsSection.snipeIt.title, systemImage: SettingsSection.snipeIt.systemImage)
-          }
+        Tab(
+          SettingsSection.snipeIt.title,
+          systemImage: SettingsSection.snipeIt.systemImage
+        ) {
+          settingsDestination(.snipeIt)
+        }
 
-        settingsDestination(.jamf)
-          .tabItem {
-            Label(SettingsSection.jamf.title, systemImage: SettingsSection.jamf.systemImage)
-          }
+        Tab(SettingsSection.jamf.title, systemImage: SettingsSection.jamf.systemImage) {
+          settingsDestination(.jamf)
+        }
 
-        settingsDestination(.intune)
-          .tabItem {
-            Label(SettingsSection.intune.title, systemImage: SettingsSection.intune.systemImage)
-          }
+        Tab(SettingsSection.intune.title, systemImage: SettingsSection.intune.systemImage) {
+          settingsDestination(.intune)
+        }
 
-        settingsDestination(.freshservice)
-          .tabItem {
-            Label(
-              SettingsSection.freshservice.title,
-              systemImage: SettingsSection.freshservice.systemImage
-            )
-          }
+        Tab(
+          SettingsSection.freshservice.title,
+          systemImage: SettingsSection.freshservice.systemImage
+        ) {
+          settingsDestination(.freshservice)
+        }
 
-        settingsDestination(.compnow)
-          .tabItem {
-            Label(SettingsSection.compnow.title, systemImage: SettingsSection.compnow.systemImage)
-          }
+        Tab(SettingsSection.compnow.title, systemImage: SettingsSection.compnow.systemImage) {
+          settingsDestination(.compnow)
+        }
       }
       .frame(minWidth: 500, minHeight: 400)
-      .padding()
+      .scenePadding()
     #else
       List(SettingsSection.allCases) { section in
         NavigationLink {
           settingsDestination(section)
             .navigationTitle(section.title)
+            .refreshable {
+              await modelData.cacheManager.sync()
+            }
         } label: {
           Label(section.title, systemImage: section.systemImage)
         }
       }
       .navigationTitle("Settings")
+      .refreshable {
+        await modelData.cacheManager.sync()
+      }
     #endif
   }
 
@@ -141,8 +145,8 @@ struct SnipeItSettingsView: View {
             }
           }
 
-        TextField("Base URL", text: $settings.snipeItBaseURL)
-        SecureField("API Key", text: $settings.snipeItAPIKey)
+        SettingsTextField("Base URL", text: $settings.snipeItBaseURL, kind: .url)
+        SettingsSecureField("API Key", text: $settings.snipeItAPIKey)
 
         ConnectionTestRow(disabled: settings.snipeItBaseURL.isEmpty) {
           try await testConnection()
@@ -150,9 +154,21 @@ struct SnipeItSettingsView: View {
       }
 
       Section("Configuration") {
-        TextField("Spare Device Name Regex", text: $settings.snipeItSpareDeviceNameRegex)
-        TextField("Condition Custom Field", text: $settings.snipeItConditionField)
-        TextField("Condition Notes Custom Field", text: $settings.snipeItConditionNotesField)
+        SettingsTextField(
+          "Spare Device Name Regex",
+          text: $settings.snipeItSpareDeviceNameRegex,
+          kind: .identifier
+        )
+        SettingsTextField(
+          "Condition Custom Field",
+          text: $settings.snipeItConditionField,
+          kind: .identifier
+        )
+        SettingsTextField(
+          "Condition Notes Custom Field",
+          text: $settings.snipeItConditionNotesField,
+          kind: .identifier
+        )
       }
 
       Section("Snipe-IT Statuses") {
@@ -166,15 +182,18 @@ struct SnipeItSettingsView: View {
           }
         }
 
-        Button {
-          Task { await cacheManager.sync() }
-        } label: {
-          Label("Refresh Statuses", systemImage: "arrow.clockwise")
-        }
-        .disabled(settings.snipeItIsEnabled == false || cacheManager.isSyncing)
+        #if os(macOS)
+          Button {
+            Task { await cacheManager.sync() }
+          } label: {
+            Label("Refresh Statuses", systemImage: "arrow.clockwise")
+          }
+          .disabled(settings.snipeItIsEnabled == false || cacheManager.isSyncing)
+        #endif
       }
     }
     .formStyle(.grouped)
+    .scrollDismissesKeyboard(.interactively)
   }
 
   // MARK: - Private Helpers
@@ -209,9 +228,9 @@ struct JamfSettingsView: View {
             }
           }
 
-        TextField("Base URL", text: $settings.jamfBaseURL)
-        TextField("Client ID", text: $settings.jamfClientId)
-        SecureField("Client Secret", text: $settings.jamfClientSecret)
+        SettingsTextField("Base URL", text: $settings.jamfBaseURL, kind: .url)
+        SettingsTextField("Client ID", text: $settings.jamfClientId, kind: .identifier)
+        SettingsSecureField("Client Secret", text: $settings.jamfClientSecret)
 
         ConnectionTestRow(disabled: settings.jamfBaseURL.isEmpty) {
           try await testConnection()
@@ -225,6 +244,7 @@ struct JamfSettingsView: View {
       }
     }
     .formStyle(.grouped)
+    .scrollDismissesKeyboard(.interactively)
   }
 
   // MARK: - Private Helpers
@@ -263,9 +283,9 @@ struct IntuneSettingsView: View {
             }
           }
 
-        TextField("Tenant ID", text: $settings.intuneTenantId)
-        TextField("Client ID", text: $settings.intuneClientId)
-        SecureField("Client Secret", text: $settings.intuneClientSecret)
+        SettingsTextField("Tenant ID", text: $settings.intuneTenantId, kind: .identifier)
+        SettingsTextField("Client ID", text: $settings.intuneClientId, kind: .identifier)
+        SettingsSecureField("Client Secret", text: $settings.intuneClientSecret)
 
         ConnectionTestRow {
           try await testConnection()
@@ -279,6 +299,7 @@ struct IntuneSettingsView: View {
       }
     }
     .formStyle(.grouped)
+    .scrollDismissesKeyboard(.interactively)
   }
 
   // MARK: - Private Helpers
@@ -304,8 +325,8 @@ struct FreshserviceSettingsView: View {
     Form {
       Section("Credentials") {
         Toggle("Enabled", isOn: $settings.freshserviceIsEnabled)
-        TextField("Base URL", text: $settings.freshserviceBaseURL)
-        SecureField("API Key", text: $settings.freshserviceAPIKey)
+        SettingsTextField("Base URL", text: $settings.freshserviceBaseURL, kind: .url)
+        SettingsSecureField("API Key", text: $settings.freshserviceAPIKey)
 
         ConnectionTestRow(disabled: settings.freshserviceBaseURL.isEmpty) {
           try await testConnection()
@@ -313,20 +334,21 @@ struct FreshserviceSettingsView: View {
       }
 
       Section("Configuration") {
-        TextField("Workspace ID", value: $settings.freshserviceWorkspaceId, format: .number)
-        TextField(
-          "Return Service Item ID",
-          value: $settings.freshserviceReturnedMachineServiceItemId,
-          format: .number
+        SettingsIntegerField("Workspace ID", value: $settings.freshserviceWorkspaceId)
+        SettingsTextField(
+          "Spare Custom Field",
+          text: $settings.freshserviceSpareField,
+          kind: .identifier
         )
-        TextField("Return Condition Field", text: $settings.freshserviceReturnConditionField)
-        TextField("Return Charger Field", text: $settings.freshserviceReturnChargerField)
-        TextField("Return Notes Field", text: $settings.freshserviceReturnNotesField)
-        TextField("Spare Field", text: $settings.freshserviceSpareField)
-        TextField("Compnow Ticket Field", text: $settings.freshserviceCompnowField)
+        SettingsTextField(
+          "Compnow Ticket Custom Field",
+          text: $settings.freshserviceCompnowField,
+          kind: .identifier
+        )
       }
     }
     .formStyle(.grouped)
+    .scrollDismissesKeyboard(.interactively)
   }
 
   // MARK: - Private Helpers
@@ -351,9 +373,9 @@ struct CompnowSettingsView: View {
     Form {
       Section("Credentials") {
         Toggle("Enabled", isOn: $settings.compnowIsEnabled)
-        TextField("Username", text: $settings.compnowUsername)
-        SecureField("Password", text: $settings.compnowPassword)
-        SecureField("API Key", text: $settings.compnowAPIKey)
+        SettingsTextField("Username", text: $settings.compnowUsername, kind: .identifier)
+        SettingsSecureField("Password", text: $settings.compnowPassword)
+        SettingsSecureField("API Key", text: $settings.compnowAPIKey)
 
         ConnectionTestRow {
           try await testConnection()
@@ -361,15 +383,16 @@ struct CompnowSettingsView: View {
       }
 
       Section("End User Details") {
-        TextField("Address", text: $settings.compnowAddress)
-        TextField("Suburb", text: $settings.compnowSuburb)
-        TextField("State", text: $settings.compnowState)
-        TextField("Postcode", text: $settings.compnowPostcode)
-        TextField("Email", text: $settings.compnowEmail)
-        TextField("Phone", text: $settings.compnowPhone)
+        SettingsTextField("Address", text: $settings.compnowAddress)
+        SettingsTextField("Suburb", text: $settings.compnowSuburb)
+        SettingsTextField("State", text: $settings.compnowState)
+        SettingsTextField("Postcode", text: $settings.compnowPostcode, kind: .number)
+        SettingsTextField("Email", text: $settings.compnowEmail, kind: .email)
+        SettingsTextField("Phone", text: $settings.compnowPhone, kind: .telephone)
       }
     }
     .formStyle(.grouped)
+    .scrollDismissesKeyboard(.interactively)
   }
 
   // MARK: - Private Helpers
@@ -411,13 +434,13 @@ private struct ConnectionTestRow: View {
       case .success:
         Image(systemName: "checkmark.circle.fill")
           .foregroundStyle(.green)
+          .accessibilityLabel("Connection successful")
       case .failure:
-        Button {
+        Button("Show Connection Error", systemImage: "xmark.circle.fill") {
           showErrorPopover = true
-        } label: {
-          Image(systemName: "xmark.circle.fill")
-            .foregroundStyle(.red)
         }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(.red)
         .buttonStyle(.plain)
         .popover(isPresented: $showErrorPopover) {
           if case let .failure(message) = testResult {
@@ -445,6 +468,126 @@ private struct ConnectionTestRow: View {
       testResult = .success
     } catch {
       testResult = .failure(error.localizedDescription)
+    }
+  }
+}
+
+// MARK: - Settings Fields
+
+private enum SettingsFieldKind {
+  case plain
+  case url
+  case identifier
+  case email
+  case telephone
+  case number
+}
+
+private struct SettingsTextField: View {
+  let title: String
+  @Binding var text: String
+  let kind: SettingsFieldKind
+
+  init(
+    _ title: String,
+    text: Binding<String>,
+    kind: SettingsFieldKind = .plain
+  ) {
+    self.title = title
+    _text = text
+    self.kind = kind
+  }
+
+  var body: some View {
+    LabeledContent(title) {
+      configuredField
+    }
+  }
+
+  @ViewBuilder
+  private var configuredField: some View {
+    let field = TextField(title, text: $text)
+      .labelsHidden()
+
+    switch kind {
+    case .plain:
+      field
+    case .url:
+      field
+        .textContentType(.URL)
+        .autocorrectionDisabled()
+      #if os(iOS)
+        .keyboardType(.URL)
+        .textInputAutocapitalization(.never)
+      #endif
+    case .identifier:
+      field
+        .autocorrectionDisabled()
+      #if os(iOS)
+        .textInputAutocapitalization(.never)
+      #endif
+    case .email:
+      field
+        .textContentType(.emailAddress)
+        .autocorrectionDisabled()
+      #if os(iOS)
+        .keyboardType(.emailAddress)
+        .textInputAutocapitalization(.never)
+      #endif
+    case .telephone:
+      field
+        .textContentType(.telephoneNumber)
+      #if os(iOS)
+        .keyboardType(.phonePad)
+      #endif
+    case .number:
+      field
+        .autocorrectionDisabled()
+      #if os(iOS)
+        .keyboardType(.numberPad)
+      #endif
+    }
+  }
+}
+
+private struct SettingsSecureField: View {
+  let title: String
+  @Binding var text: String
+
+  init(_ title: String, text: Binding<String>) {
+    self.title = title
+    _text = text
+  }
+
+  var body: some View {
+    LabeledContent(title) {
+      SecureField(title, text: $text)
+        .labelsHidden()
+        .autocorrectionDisabled()
+      #if os(iOS)
+        .textInputAutocapitalization(.never)
+      #endif
+    }
+    .privacySensitive()
+  }
+}
+
+private struct SettingsIntegerField: View {
+  let title: String
+  @Binding var value: Int
+
+  init(_ title: String, value: Binding<Int>) {
+    self.title = title
+    _value = value
+  }
+
+  var body: some View {
+    LabeledContent(title) {
+      TextField(title, value: $value, format: .number)
+        .labelsHidden()
+      #if os(iOS)
+        .keyboardType(.numberPad)
+      #endif
     }
   }
 }

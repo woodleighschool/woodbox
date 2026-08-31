@@ -47,5 +47,6 @@
 ## Repository contract
 
 - The app supports iOS and macOS from one Xcode project. Keep shared workflows platform-neutral and platform-specific behaviour at the edge.
-- Repair intake, return check-in, sale preparation, bulk scanning, deduplication, and device administration remain distinct workflows over shared service clients.
+- Repair, restock, sale preparation, deduplication, and device administration remain distinct user workflows over shared service clients.
+- Restock and Sale share device capture and processing primitives. They apply a user-selected Snipe-IT status rather than defining status semantics in the app.
 - The Xcode project and release workflows own build, signing, version, and distribution contracts.

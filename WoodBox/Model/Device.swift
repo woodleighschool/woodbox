@@ -71,16 +71,20 @@ final class MDMRecord {
   }
 }
 
-enum MDMProvider: String, Codable, CaseIterable, Identifiable {
+enum MDMProvider: String, Codable, CaseIterable, Identifiable, Sendable {
   case jamf = "Jamf"
   case intune = "Intune"
 
   var id: String {
     rawValue
   }
+
+  var processingOrder: Int {
+    Self.allCases.firstIndex(of: self) ?? 0
+  }
 }
 
-enum JamfDeviceType: String, Codable {
+enum JamfDeviceType: String, Codable, Sendable {
   case computer = "Computer"
   case mobile = "Mobile"
 }
@@ -88,10 +92,6 @@ enum JamfDeviceType: String, Codable {
 // MARK: - Extensions
 
 extension Device {
-  var hasSnipeItAsset: Bool {
-    snipeItId != nil
-  }
-
   var mdmProviderNames: [String] {
     var providers: [String] = []
     if mdmRecords.contains(where: { $0.provider == .jamf }) {
@@ -104,6 +104,10 @@ extension Device {
   }
 
   var symbolName: String {
+    Self.symbolName(for: model)
+  }
+
+  static func symbolName(for model: String) -> String {
     let rules: [(String, String)] = [
       ("MacBook", "laptopcomputer"),
       ("iMac", "desktopcomputer"),

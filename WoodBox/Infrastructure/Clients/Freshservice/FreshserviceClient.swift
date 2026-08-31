@@ -34,25 +34,6 @@ struct FreshserviceClient {
     return String(response.ticket.id)
   }
 
-  func createFreshserviceServiceRequest(
-    serviceItemId: Int,
-    request serviceRequest: FreshserviceServiceRequestCreateRequest
-  ) async throws -> String {
-    let url = baseURL.appending(
-      path: "api/v2/service_catalog/items/\(serviceItemId)/place_request"
-    )
-    var request = authorizedRequest(url: url, method: "POST")
-    request.httpBody = try JSONEncoder().encode(serviceRequest)
-
-    let response = try await http.decode(
-      FreshserviceServiceRequestCreateResponse.self,
-      from: request,
-      action: "create service request",
-      integration: "Freshservice"
-    )
-    return String(response.serviceRequest.id)
-  }
-
   // MARK: - Private Helpers
 
   private func fetchFreshserviceTickets(limit: Int) async throws {

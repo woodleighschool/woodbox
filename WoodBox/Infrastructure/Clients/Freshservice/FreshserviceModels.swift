@@ -48,39 +48,3 @@ enum FreshserviceTicketPriority: Int, Codable {
   case high = 3
   case urgent = 4
 }
-
-// MARK: Service Requests
-
-/// Request
-struct FreshserviceServiceRequestCreateRequest: Encodable {
-  let email: String
-  let quantity: Int = 1
-  let customFields: [String: String]?
-  let workspaceId: Int?
-
-  init(email: String, customFields: [String: String]?, workspaceId: Int?) {
-    self.email = email
-    self.customFields = customFields?.isEmpty == true ? nil : customFields
-    self.workspaceId = workspaceId
-  }
-
-  enum CodingKeys: String, CodingKey {
-    case customFields = "custom_fields"
-    case email
-    case quantity
-    case workspaceId = "workspace_id"
-  }
-}
-
-/// Response
-struct FreshserviceServiceRequestCreateResponse: Decodable {
-  let serviceRequest: FreshserviceServiceRequest
-
-  enum CodingKeys: String, CodingKey {
-    case serviceRequest = "service_request"
-  }
-}
-
-struct FreshserviceServiceRequest: Decodable {
-  let id: Int
-}

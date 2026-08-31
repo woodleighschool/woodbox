@@ -5,8 +5,8 @@ import Testing
 @Suite("MDM deletion")
 @MainActor
 struct MDMDeletionServiceTests {
-  @Test("removing a record preserves the remote deletion request")
-  func removesLocalRecord() throws {
+  @Test("a remote request can be preserved before removing the local record")
+  func preservesRequestBeforeLocalRemoval() throws {
     let schema = Schema([Device.self, MDMRecord.self])
     let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try ModelContainer(for: schema, configurations: configuration)
@@ -33,14 +33,13 @@ struct MDMDeletionServiceTests {
     context.insert(device)
     try context.save()
 
-    let requests = MDMDeletionService.remove(
-      records: [jamfRecord],
+    let request = MDMDeletionService.Request(record: jamfRecord)
+    MDMDeletionService.removeLocally(
+      jamfRecord,
       from: device,
       modelContext: context
     )
 
-    let request = try #require(requests.first)
-    #expect(requests.count == 1)
     #expect(request.provider == .jamf)
     #expect(request.deviceId == "101")
     #expect(request.jamfDeviceType == .computer)

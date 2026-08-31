@@ -9,11 +9,8 @@ struct WoodBoxApp: App {
       MDMRecord.self,
       SnipeItStatus.self,
       SnipeItUser.self,
+      DeviceProcessingItem.self,
     ]
-
-    #if os(iOS)
-      modelTypes.append(BulkScanHistoryItem.self)
-    #endif
 
     return modelTypes
   }()

@@ -13,21 +13,15 @@ struct ToolsSplitView: View {
   private var workflowTabs: [AppTab] {
     [
       .repairIntake,
-      .returnCheckIn,
-      .salePreparation,
+      .restock,
+      .sale,
     ]
   }
 
   private var utilityTabs: [AppTab] {
-    var tabs: [AppTab] = [
+    [
       .deviceDeduplication,
     ]
-
-    #if os(iOS)
-      tabs.append(.bulkScanner)
-    #endif
-
-    return tabs
   }
 
   // MARK: - Body
@@ -66,13 +60,13 @@ struct ToolsSplitView: View {
             }
           }
         }
-        .navigationTitle("Tools")
+        .navigationTitle("WoodBox")
         .refreshable {
           await refreshCache()
         }
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
-            SettingsButton {
+            Button("Settings", systemImage: "gearshape") {
               isSettingsSheetPresented = true
             }
           }
@@ -80,9 +74,6 @@ struct ToolsSplitView: View {
         .navigationDestination(for: AppTab.self) { tab in
           toolContent(for: tab)
             .navigationTitle(tab.title)
-            .refreshable {
-              await refreshCache()
-            }
         }
       }
       .sheet(isPresented: $isSettingsSheetPresented) {
@@ -128,7 +119,7 @@ struct ToolsSplitView: View {
             }
           }
         }
-        .navigationTitle("Tools")
+        .navigationTitle("WoodBox")
       } detail: {
         NavigationStack {
           toolContent(for: modelData.selectedTab)
@@ -149,19 +140,14 @@ struct ToolsSplitView: View {
     case .repairIntake:
       RepairIntakeView(deviceSelection: modelData.deviceSelection)
 
-    case .returnCheckIn:
-      ReturnCheckInView(deviceSelection: modelData.deviceSelection)
+    case .restock:
+      DeviceProcessingView(profile: .restock)
 
-    case .salePreparation:
-      SalePreparationView(deviceSelection: modelData.deviceSelection)
+    case .sale:
+      DeviceProcessingView(profile: .sale)
 
     case .deviceDeduplication:
       DeviceDeduplicationView()
-
-    #if os(iOS)
-      case .bulkScanner:
-        BulkScannerView()
-    #endif
     }
   }
 
@@ -180,19 +166,3 @@ struct ToolsSplitView: View {
     }
   #endif
 }
-
-#if os(iOS)
-  private struct SettingsButton: View {
-    let action: () -> Void
-
-    var body: some View {
-      Button(action: action) {
-        Image(systemName: "gearshape")
-          .font(.title2)
-          .symbolRenderingMode(.hierarchical)
-      }
-      .accessibilityLabel("Open settings")
-      .buttonStyle(.plain)
-    }
-  }
-#endif
