@@ -2,10 +2,25 @@ import Foundation
 import SwiftData
 
 enum MDMDeletionService {
-  struct Request {
+  struct Request: Equatable, Sendable {
     let provider: MDMProvider
     let deviceId: String
     let jamfDeviceType: JamfDeviceType?
+
+    init(provider: MDMProvider, deviceId: String, jamfDeviceType: JamfDeviceType?) {
+      self.provider = provider
+      self.deviceId = deviceId
+      self.jamfDeviceType = jamfDeviceType
+    }
+
+    @MainActor
+    init(record: MDMRecord) {
+      self.init(
+        provider: record.provider,
+        deviceId: record.deviceId,
+        jamfDeviceType: record.jamfDeviceType
+      )
+    }
   }
 
   @MainActor
@@ -14,57 +29,47 @@ enum MDMDeletionService {
 
     switch request.provider {
     case .jamf:
-      guard let jamfClient = settings.jamfClient else { return }
-      if request.jamfDeviceType == .mobile {
-        try await jamfClient.deleteJamfMobileDevice(id: request.deviceId)
-      } else {
-        try await jamfClient.deleteJamfComputer(id: request.deviceId)
+      guard let jamfClient = settings.jamfClient else {
+        throw IntegrationError(
+          action: "delete device",
+          integration: "Jamf",
+          message: "The integration is not enabled or configured"
+        )
+      }
+      do {
+        if request.jamfDeviceType == .mobile {
+          try await jamfClient.deleteJamfMobileDevice(id: request.deviceId)
+        } else {
+          try await jamfClient.deleteJamfComputer(id: request.deviceId)
+        }
+      } catch let error as IntegrationError where error.statusCode == 404 {
+        return
       }
 
     case .intune:
-      guard let intuneClient = settings.intuneClient else { return }
-      try await intuneClient.deleteIntuneDevice(id: request.deviceId)
+      guard let intuneClient = settings.intuneClient else {
+        throw IntegrationError(
+          action: "delete device",
+          integration: "Intune",
+          message: "The integration is not enabled or configured"
+        )
+      }
+      do {
+        try await intuneClient.deleteIntuneDevice(id: request.deviceId)
+      } catch let error as IntegrationError where error.statusCode == 404 {
+        return
+      }
     }
   }
 
   @MainActor
-  static func remove(
-    records: [MDMRecord],
+  static func removeLocally(
+    _ record: MDMRecord,
     from device: Device,
     modelContext: ModelContext
-  ) -> [Request] {
-    let requests = records.map {
-      Request(provider: $0.provider, deviceId: $0.deviceId, jamfDeviceType: $0.jamfDeviceType)
-    }
-
-    let recordIds = Set(records.map(\.id))
-    device.mdmRecords.removeAll { recordIds.contains($0.id) }
-    records.forEach(modelContext.delete)
+  ) {
+    device.mdmRecords.removeAll { $0.id == record.id }
+    modelContext.delete(record)
     try? modelContext.save()
-
-    return requests
-  }
-
-  static func delete(_ requests: [Request]) async -> [Error] {
-    await withTaskGroup(of: Error?.self) { group in
-      for request in requests {
-        group.addTask {
-          do {
-            try await delete(request)
-            return nil
-          } catch {
-            return error
-          }
-        }
-      }
-
-      var errors: [Error] = []
-      for await error in group {
-        if let error {
-          errors.append(error)
-        }
-      }
-      return errors
-    }
   }
 }

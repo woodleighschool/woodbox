@@ -22,10 +22,15 @@ struct IntegrationModelTests {
     #expect(payload["custom_fields"] == nil)
   }
 
-  @Test("Freshservice requests use the API's snake-case keys")
+  @Test("Freshservice tickets use the API's snake-case keys")
   func encodesFreshserviceRequest() throws {
-    let request = FreshserviceServiceRequestCreateRequest(
+    let request = FreshserviceTicketRequest(
       email: "person@example.invalid",
+      subject: "Repair",
+      description: "Broken display",
+      status: .open,
+      priority: .low,
+      tags: ["repair"],
       customFields: ["device_serial": "SERIAL-001"],
       workspaceId: 42
     )
@@ -36,7 +41,7 @@ struct IntegrationModelTests {
     let customFields = try #require(payload["custom_fields"] as? [String: String])
 
     #expect(payload["email"] as? String == "person@example.invalid")
-    #expect(payload["quantity"] as? Int == 1)
+    #expect(payload["subject"] as? String == "Repair")
     #expect(payload["workspace_id"] as? Int == 42)
     #expect(customFields == ["device_serial": "SERIAL-001"])
   }

@@ -4,8 +4,8 @@ import SwiftUI
 // MARK: - Public API
 
 extension View {
-  func deviceSearch(selection: DeviceSelectionState) -> some View {
-    modifier(DeviceSearch(selection: selection))
+  func deviceSearch(selection: DeviceSelectionState, isEnabled: Bool = true) -> some View {
+    modifier(DeviceSearch(selection: selection, isEnabled: isEnabled))
   }
 }
 
@@ -13,9 +13,14 @@ extension View {
 
 private struct DeviceSearch: ViewModifier {
   @Bindable var selection: DeviceSelectionState
+  let isEnabled: Bool
 
   func body(content: Content) -> some View {
-    DeviceSearchBody(content: content, selection: selection)
+    if isEnabled {
+      DeviceSearchBody(content: content, selection: selection)
+    } else {
+      content
+    }
   }
 }
 
@@ -80,14 +85,12 @@ private struct DeviceSearchBody<Content: View>: View {
       .sheet(isPresented: $isScanningDevice) {
         DeviceScannerSheet(selection: selection)
           .presentationDetents([.medium])
+          .presentationDragIndicator(.visible)
       }
       .toolbar {
-        // I do want this next to the search field, does not seem achievable...?
         ToolbarItem(placement: .topBarTrailing) {
-          Button {
+          Button("Scan Device", systemImage: "camera.viewfinder") {
             isScanningDevice = true
-          } label: {
-            Image(systemName: "camera.viewfinder")
           }
         }
       }
@@ -95,18 +98,6 @@ private struct DeviceSearchBody<Content: View>: View {
   }
 
   private var filteredDevices: [Device] {
-    let q = selection.query.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !q.isEmpty else { return [] }
-
-    var descriptor = FetchDescriptor<Device>(
-      predicate: #Predicate { device in
-        device.serial.localizedStandardContains(q)
-          || device.assetTag.localizedStandardContains(q)
-          || device.assignedUserEmail?.localizedStandardContains(q) == true
-      },
-      sortBy: [SortDescriptor(\Device.name)]
-    )
-    descriptor.fetchLimit = 25
-    return (try? modelContext.fetch(descriptor)) ?? []
+    modelContext.searchDevices(matching: selection.query)
   }
 }

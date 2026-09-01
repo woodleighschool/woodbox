@@ -5,35 +5,6 @@ import SwiftUI
   import Vision
   import VisionKit
 
-  // MARK: - ScanType
-
-  enum ScanType {
-    case assetTag
-    case serial
-
-    var label: String {
-      switch self {
-      case .assetTag: "asset tag"
-      case .serial: "serial number"
-      }
-    }
-  }
-
-  // MARK: - Extensions
-
-  extension ModelContext {
-    func fetchDevice(matching value: String, scanType: ScanType) -> Device? {
-      let predicate: Predicate<Device> =
-        scanType == .assetTag
-          ? #Predicate { $0.assetTag == value }
-        : #Predicate { $0.serial == value }
-
-      var descriptor = FetchDescriptor<Device>(predicate: predicate)
-      descriptor.fetchLimit = 1
-      return try? fetch(descriptor).first
-    }
-  }
-
   // MARK: - DeviceScanner
 
   struct DeviceScanner<Trigger: Equatable>: View {
@@ -48,11 +19,7 @@ import SwiftUI
     // MARK: - Body
 
     var body: some View {
-      NavigationStack {
-        GeometryReader { proxy in
-          DeviceScannerCameraView(onCandidate: onCandidate)
-            .frame(width: proxy.size.width, height: proxy.size.height)
-        }
+      DeviceScannerCameraView(onCandidate: onCandidate)
         .ignoresSafeArea(edges: .bottom)
         .toolbar {
           ToolbarItem(placement: .principal) {
@@ -62,14 +29,12 @@ import SwiftUI
             }
           }
           ToolbarItem(placement: .cancellationAction) {
-            Button(action: onClose) {
-              Image(systemName: "xmark")
-            }
+            Button("Close", systemImage: "xmark", action: onClose)
+              .labelStyle(.iconOnly)
           }
         }
         .toolbarTitleDisplayMode(.inline)
         .sensoryFeedback(.success, trigger: trigger)
-      }
     }
   }
 
@@ -89,14 +54,15 @@ import SwiftUI
     // MARK: - Body
 
     var body: some View {
-      DeviceScanner(
-        title: "Scan asset tag or serial",
-        subtitle: "Align the code in the frame",
-        trigger: scanFeedback,
-        onClose: { dismiss() },
-        onCandidate: handleCandidate
-      )
-      .presentationDetents([.medium])
+      NavigationStack {
+        DeviceScanner(
+          title: "Scan asset tag or serial",
+          subtitle: "Align the code in the frame",
+          trigger: scanFeedback,
+          onClose: { dismiss() },
+          onCandidate: handleCandidate
+        )
+      }
       .alert(item: $notFoundAlert) { item in
         Alert(
           title: Text(item.title),

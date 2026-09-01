@@ -127,38 +127,6 @@ final class AppSettings {
     }
   }
 
-  var freshserviceReturnedMachineServiceItemId: Int {
-    didSet {
-      UserDefaults.standard.set(
-        freshserviceReturnedMachineServiceItemId, forKey: "freshserviceReturnedMachineServiceItemId"
-      )
-    }
-  }
-
-  var freshserviceReturnConditionField: String {
-    didSet {
-      UserDefaults.standard.set(
-        freshserviceReturnConditionField, forKey: "freshserviceReturnConditionField"
-      )
-    }
-  }
-
-  var freshserviceReturnChargerField: String {
-    didSet {
-      UserDefaults.standard.set(
-        freshserviceReturnChargerField, forKey: "freshserviceReturnChargerField"
-      )
-    }
-  }
-
-  var freshserviceReturnNotesField: String {
-    didSet {
-      UserDefaults.standard.set(
-        freshserviceReturnNotesField, forKey: "freshserviceReturnNotesField"
-      )
-    }
-  }
-
   var freshserviceSpareField: String {
     didSet {
       UserDefaults.standard.set(freshserviceSpareField, forKey: "freshserviceSpareField")
@@ -252,14 +220,9 @@ final class AppSettings {
     snipeItSpareDeviceNameRegex =
       UserDefaults.standard.string(forKey: "snipeItSpareDeviceNameRegex") ?? ""
     snipeItConditionField =
-      UserDefaults.standard.string(forKey: "snipeItConditionField")
-        ?? UserDefaults.standard.string(forKey: "snipeItConditionFieldKey")
-        ?? ""
+      UserDefaults.standard.string(forKey: "snipeItConditionField") ?? ""
     snipeItConditionNotesField =
-      UserDefaults.standard.string(forKey: "snipeItConditionNotesField")
-        ?? UserDefaults.standard.string(forKey: "snipeItConditionNotesFieldKey")
-        ?? UserDefaults.standard.string(forKey: "snipeItNotesFieldKey")
-        ?? ""
+      UserDefaults.standard.string(forKey: "snipeItConditionNotesField") ?? ""
     jamfIsEnabled = UserDefaults.standard.bool(forKey: "jamfIsEnabled")
     jamfBaseURL = UserDefaults.standard.string(forKey: "jamfBaseURL") ?? ""
     jamfClientId = UserDefaults.standard.string(forKey: "jamfClientId") ?? ""
@@ -274,15 +237,6 @@ final class AppSettings {
     freshserviceBaseURL = UserDefaults.standard.string(forKey: "freshserviceBaseURL") ?? ""
     freshserviceAPIKey = keychain.read(key: "freshserviceAPIKey") ?? ""
     freshserviceWorkspaceId = UserDefaults.standard.integer(forKey: "freshserviceWorkspaceId")
-    freshserviceReturnedMachineServiceItemId = UserDefaults.standard.integer(
-      forKey: "freshserviceReturnedMachineServiceItemId"
-    )
-    freshserviceReturnConditionField =
-      UserDefaults.standard.string(forKey: "freshserviceReturnConditionField") ?? ""
-    freshserviceReturnChargerField =
-      UserDefaults.standard.string(forKey: "freshserviceReturnChargerField") ?? ""
-    freshserviceReturnNotesField =
-      UserDefaults.standard.string(forKey: "freshserviceReturnNotesField") ?? ""
     freshserviceSpareField = UserDefaults.standard.string(forKey: "freshserviceSpareField") ?? ""
     freshserviceCompnowField =
       UserDefaults.standard.string(forKey: "freshserviceCompnowField") ?? ""
@@ -304,6 +258,23 @@ final class AppSettings {
 // MARK: - Client Helpers
 
 extension AppSettings {
+  func lastTargetStatusId(for profile: DeviceProcessingProfile) -> Int? {
+    UserDefaults.standard.object(forKey: targetStatusKey(for: profile)) as? Int
+  }
+
+  func setLastTargetStatusId(_ statusId: Int?, for profile: DeviceProcessingProfile) {
+    let key = targetStatusKey(for: profile)
+    if let statusId {
+      UserDefaults.standard.set(statusId, forKey: key)
+    } else {
+      UserDefaults.standard.removeObject(forKey: key)
+    }
+  }
+
+  private func targetStatusKey(for profile: DeviceProcessingProfile) -> String {
+    "lastTargetStatusId.\(profile.rawValue)"
+  }
+
   var compnowClient: CompnowClient? {
     guard compnowIsEnabled else { return nil }
     return CompnowClient(

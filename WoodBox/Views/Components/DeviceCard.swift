@@ -85,8 +85,7 @@ struct DeviceSummaryItem<Accessory: View>: View {
 
   private func identifiersRow(_ device: Device) -> some View {
     HStack(spacing: 8) {
-      Label(device.assetTag, systemImage: "barcode")
-      Label(device.serial, systemImage: "number")
+      DeviceIdentifiersRow(assetTag: device.assetTag, serial: device.serial)
       #if os(macOS)
         if let storage = device.storage.nilIfEmpty {
           Label(storage, systemImage: "internaldrive")
@@ -117,6 +116,18 @@ struct DeviceSummaryItem<Accessory: View>: View {
       }
       .buttonStyle(.plain)
       .foregroundStyle(.secondary)
+    }
+  }
+}
+
+struct DeviceIdentifiersRow: View {
+  let assetTag: String
+  let serial: String
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Label(assetTag, systemImage: "barcode")
+      Label(serial, systemImage: "number")
     }
   }
 }

@@ -33,6 +33,11 @@ struct DeviceDeduplicationView: View {
         }
       }
     }
+    #if os(iOS)
+    .refreshable {
+      await modelData.cacheManager.sync()
+    }
+    #endif
     .alert(
       "Confirm Deletion",
       isPresented: Binding(
@@ -66,14 +71,11 @@ struct DeviceDeduplicationView: View {
 
   private func delete(_ record: MDMRecord, from device: Device) async {
     pendingDeletion = nil
-    let requests = MDMDeletionService.remove(
-      records: [record],
-      from: device,
-      modelContext: modelContext
-    )
-
-    let errors = await MDMDeletionService.delete(requests)
-    if let error = errors.first {
+    let request = MDMDeletionService.Request(record: record)
+    do {
+      try await MDMDeletionService.delete(request)
+      MDMDeletionService.removeLocally(record, from: device, modelContext: modelContext)
+    } catch {
       alertItem = .error(error)
     }
   }
@@ -116,7 +118,9 @@ struct DuplicateRecordRow: View {
   let settings: AppSettings
   let onDelete: () -> Void
 
-  @Environment(\.openURL) private var openURL
+  #if os(iOS)
+    @Environment(\.openURL) private var openURL
+  #endif
 
   var body: some View {
     HStack(spacing: 16) {
@@ -133,6 +137,7 @@ struct DuplicateRecordRow: View {
 
           if isLatest {
             PingBadge()
+              .accessibilityLabel("Latest record")
           }
         }
 
@@ -148,20 +153,34 @@ struct DuplicateRecordRow: View {
         .font(.caption)
         .foregroundStyle(.secondary)
       }
+
+      Spacer(minLength: 8)
+
+      #if os(macOS)
+        if let url = mdmURL {
+          Link(destination: url) {
+            Label("Open", systemImage: "safari")
+          }
+          .buttonStyle(.borderless)
+        }
+
+        Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
+          .labelStyle(.iconOnly)
+          .buttonStyle(.borderless)
+          .help("Delete this MDM record")
+      #endif
     }
+    #if os(iOS)
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-      Button(role: .destructive, action: onDelete) {
-        Image(systemName: "trash")
-      }
+      Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
       if let url = mdmURL {
-        Button {
+        Button("Open in Browser", systemImage: "safari") {
           openURL(url)
-        } label: {
-          Image(systemName: "safari")
         }
         .tint(.blue)
       }
     }
+    #endif
   }
 
   private var mdmURL: URL? {
@@ -179,21 +198,30 @@ struct DuplicateRecordRow: View {
 }
 
 struct PingBadge: View {
-  @State private var isAnimating = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var isPinging = false
 
   var body: some View {
     ZStack {
       Circle()
         .fill(.green.opacity(0.35))
         .frame(width: 10, height: 10)
-        .scaleEffect(isAnimating ? 2.2 : 1.0)
-        .opacity(isAnimating ? 0 : 1)
-        .animation(.easeOut(duration: 1.2).repeatForever(autoreverses: false), value: isAnimating)
+        .scaleEffect(isPinging ? 2.2 : 1)
+        .opacity(isPinging ? 0 : 1)
+        .animation(
+          reduceMotion ? nil : .easeOut(duration: 1.2).repeatForever(autoreverses: false),
+          value: isPinging
+        )
 
       Circle()
         .fill(.green)
         .frame(width: 10, height: 10)
     }
-    .onAppear { isAnimating = true }
+    .onAppear {
+      isPinging = !reduceMotion
+    }
+    .onChange(of: reduceMotion) { _, reduceMotion in
+      isPinging = !reduceMotion
+    }
   }
 }

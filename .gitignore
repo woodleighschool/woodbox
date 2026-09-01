@@ -1,9 +1,6 @@
 # Xcode
 xcuserdata/
 
-# Local configuration
-/WoodBox/Defaults.plist
-
 # Local Mise
 .mise.local.toml
 .mise.local.lock

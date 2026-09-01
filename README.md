@@ -5,11 +5,11 @@
 ![macOS and iOS 26+](https://img.shields.io/badge/macOS%20%7C%20iOS-26%2B-000000?logo=apple&logoColor=white)
 [![License](https://img.shields.io/github/license/woodleighschool/WoodBox)](https://github.com/woodleighschool/WoodBox/blob/main/LICENSE)
 
-Native iOS and macOS tool for repair intake, return check-in, sale preparation, bulk scanning, and device administration.
+Native iOS and macOS tool for school IT repair intake, device restocking, sale preparation, and device administration.
 
 ## 🚀 Usage
 
-The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP. Extract it, open WoodBox, then choose a workflow from the sidebar and scan or search for a device. Service connections and workflow defaults live in Settings.
+The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP. Extract it, open WoodBox, then choose a workflow and scan or search for a device. Restock and Sale accept one device or a working queue, using the camera on iOS and typed or USB scanner input on macOS. Service connections and workflow defaults live in Settings.
 
 ## 🧑‍💻 Development
 

@@ -45,7 +45,7 @@ struct HTTPClient {
 // MARK: - URL Construction Helpers
 
 extension URL {
-  func appending(path: String, queryItems: [URLQueryItem]? = nil) -> URL {
+  nonisolated func appending(path: String, queryItems: [URLQueryItem]? = nil) -> URL {
     var url = appendingPathComponent(path)
     if let queryItems, !queryItems.isEmpty {
       url.append(queryItems: queryItems)
@@ -57,11 +57,11 @@ extension URL {
 // MARK: - URLRequest + Auth
 
 extension URLRequest {
-  mutating func setBearerToken(_ token: String) {
+  nonisolated mutating func setBearerToken(_ token: String) {
     setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
   }
 
-  mutating func setBasicAuth(username: String, password: String) {
+  nonisolated mutating func setBasicAuth(username: String, password: String) {
     let credentials = "\(username):\(password)"
     guard let data = credentials.data(using: .utf8) else { return }
     setValue("Basic \(data.base64EncodedString())", forHTTPHeaderField: "Authorization")
