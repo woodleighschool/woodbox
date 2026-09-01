@@ -10,13 +10,12 @@ nonisolated struct SaleCSV: Transferable {
     let status: String
     let grade: String
     let conditionNotes: String
-    let result: String
   }
 
   let rows: [Row]
 
   var contents: String {
-    var lines = ["Serial,Asset Tag,Model,Status,Grade,Condition Notes,Result"]
+    var lines = ["Serial,Asset Tag,Model,Status,Grade,Condition Notes"]
     lines += rows.map { row in
       [
         row.serial,
@@ -25,7 +24,6 @@ nonisolated struct SaleCSV: Transferable {
         row.status,
         row.grade,
         row.conditionNotes,
-        row.result,
       ]
       .map(Self.escape)
       .joined(separator: ",")
@@ -48,16 +46,15 @@ nonisolated struct SaleCSV: Transferable {
 
 extension SaleCSV {
   @MainActor
-  init(items: [DeviceProcessingItem], fallbackStatusName: String?) {
+  init(items: [DeviceProcessingItem], statusName: String?) {
     rows = items.map { item in
       Row(
         serial: item.serial,
         assetTag: item.assetTag,
         model: item.deviceModel,
-        status: item.targetStatusName ?? fallbackStatusName ?? "",
+        status: statusName ?? "",
         grade: item.grade?.rawValue ?? "",
-        conditionNotes: item.conditionNotes,
-        result: item.state.rawValue
+        conditionNotes: item.conditionNotes
       )
     }
   }

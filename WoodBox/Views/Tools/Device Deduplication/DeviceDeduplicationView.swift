@@ -10,7 +10,6 @@ struct DeviceDeduplicationView: View {
   @Query(filter: #Predicate<Device> { $0.mdmRecords.count > 1 }, sort: \Device.serial)
   private var duplicates: [Device]
 
-  @State private var pendingDeletion: (record: MDMRecord, device: Device)?
   @State private var alertItem: AlertItem?
 
   // MARK: - Body
@@ -28,7 +27,9 @@ struct DeviceDeduplicationView: View {
       } else {
         ForEach(duplicates, id: \.serial) { device in
           DuplicateGroupSection(device: device, settings: modelData.settings) { record in
-            pendingDeletion = (record, device)
+            Task {
+              await delete(record, from: device)
+            }
           }
         }
       }
@@ -38,26 +39,6 @@ struct DeviceDeduplicationView: View {
       await modelData.cacheManager.sync()
     }
     #endif
-    .alert(
-      "Confirm Deletion",
-      isPresented: Binding(
-        get: { pendingDeletion != nil }, set: {
-          if !$0 {
-            pendingDeletion = nil
-          }
-        }
-      )
-    ) {
-      Button("Delete", role: .destructive) {
-        guard let (record, device) = pendingDeletion else { return }
-        Task { await delete(record, from: device) }
-      }
-      Button("Cancel", role: .cancel) { pendingDeletion = nil }
-    } message: {
-      if let provider = pendingDeletion?.record.provider.rawValue {
-        Text("Are you sure you want to delete this record from \(provider)?")
-      }
-    }
     .alert(item: $alertItem) { item in
       Alert(
         title: Text(item.title),
@@ -70,13 +51,32 @@ struct DeviceDeduplicationView: View {
   // MARK: - Private Methods
 
   private func delete(_ record: MDMRecord, from device: Device) async {
-    pendingDeletion = nil
     let request = MDMDeletionService.Request(record: record)
+    let localRecord = MDMDeletionService.LocalRecord(record: record)
+
     do {
-      try await MDMDeletionService.delete(request)
-      MDMDeletionService.removeLocally(record, from: device, modelContext: modelContext)
+      try MDMDeletionService.removeLocally(record, from: device, modelContext: modelContext)
     } catch {
       alertItem = .error(error)
+      return
+    }
+
+    do {
+      try await MDMDeletionService.delete(request)
+    } catch {
+      do {
+        try MDMDeletionService.restoreLocally(
+          localRecord,
+          to: device,
+          modelContext: modelContext
+        )
+        alertItem = .error(error)
+      } catch let restoreError {
+        alertItem = AlertItem(
+          title: "Deletion Failed",
+          message: "\(error.localizedDescription) The local record could not be restored: \(restoreError.localizedDescription)"
+        )
+      }
     }
   }
 }
@@ -171,7 +171,7 @@ struct DuplicateRecordRow: View {
       #endif
     }
     #if os(iOS)
-    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
       Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
       if let url = mdmURL {
         Button("Open in Browser", systemImage: "safari") {

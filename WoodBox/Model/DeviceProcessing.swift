@@ -28,19 +28,6 @@ nonisolated enum DeviceProcessingProfile: String, Codable, CaseIterable, Identif
   }
 }
 
-nonisolated enum DeviceProcessingState: String, Codable {
-  case ready
-  case processing
-  case completed
-  case failed
-}
-
-nonisolated enum DeviceProcessingFailureStage: String, Codable {
-  case validation
-  case mdm
-  case snipeIt
-}
-
 nonisolated enum DeviceProcessingDraft {
   case restock(Device)
   case sale(Device, grade: SaleGrade, conditionNotes: String)
@@ -103,15 +90,6 @@ final class DeviceProcessingItem {
   var gradeRawValue: String?
   var conditionNotes: String
 
-  var stateRawValue: String
-  var failureStageRawValue: String?
-  var operationMessage: String?
-  var errorMessage: String?
-
-  var targetStatusId: Int?
-  var targetStatusName: String?
-  var snipeItCheckedIn: Bool
-
   init(_ draft: DeviceProcessingDraft, addedAt: Date = .now) {
     let device = draft.device
     key = device.serial
@@ -123,8 +101,6 @@ final class DeviceProcessingItem {
     self.addedAt = addedAt
     gradeRawValue = draft.grade?.rawValue
     conditionNotes = draft.conditionNotes
-    stateRawValue = DeviceProcessingState.ready.rawValue
-    snipeItCheckedIn = false
   }
 }
 
@@ -139,50 +115,5 @@ extension DeviceProcessingItem {
   var grade: SaleGrade? {
     get { gradeRawValue.flatMap(SaleGrade.init(rawValue:)) }
     set { gradeRawValue = newValue?.rawValue }
-  }
-
-  var state: DeviceProcessingState {
-    get { DeviceProcessingState(rawValue: stateRawValue) ?? .ready }
-    set { stateRawValue = newValue.rawValue }
-  }
-
-  var failureStage: DeviceProcessingFailureStage? {
-    get { failureStageRawValue.flatMap(DeviceProcessingFailureStage.init(rawValue:)) }
-    set { failureStageRawValue = newValue?.rawValue }
-  }
-
-  var canProcess: Bool {
-    state != .processing && state != .completed
-  }
-
-  func begin(statusId: Int, statusName: String) {
-    state = .processing
-    failureStage = nil
-    operationMessage = "Preparing"
-    errorMessage = nil
-    targetStatusId = statusId
-    targetStatusName = statusName
-  }
-
-  func fail(stage: DeviceProcessingFailureStage, error: any Error) {
-    state = .failed
-    failureStage = stage
-    operationMessage = nil
-    errorMessage = error.localizedDescription
-  }
-
-  func complete() {
-    state = .completed
-    failureStage = nil
-    operationMessage = nil
-    errorMessage = nil
-  }
-
-  func prepareForRetry() {
-    guard state != .processing else { return }
-    state = .ready
-    failureStage = nil
-    operationMessage = nil
-    errorMessage = nil
   }
 }

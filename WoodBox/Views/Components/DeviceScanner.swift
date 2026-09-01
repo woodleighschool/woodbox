@@ -13,7 +13,6 @@ import SwiftUI
     let title: String
     let subtitle: String
     let trigger: Trigger
-    let onClose: () -> Void
     let onCandidate: (String, ScanType) -> Void
 
     // MARK: - Body
@@ -27,10 +26,6 @@ import SwiftUI
               Text(title).font(.headline)
               Text(subtitle).font(.footnote).foregroundStyle(.secondary)
             }
-          }
-          ToolbarItem(placement: .cancellationAction) {
-            Button("Close", systemImage: "xmark", action: onClose)
-              .labelStyle(.iconOnly)
           }
         }
         .toolbarTitleDisplayMode(.inline)
@@ -59,7 +54,6 @@ import SwiftUI
           title: "Scan asset tag or serial",
           subtitle: "Align the code in the frame",
           trigger: scanFeedback,
-          onClose: { dismiss() },
           onCandidate: handleCandidate
         )
       }

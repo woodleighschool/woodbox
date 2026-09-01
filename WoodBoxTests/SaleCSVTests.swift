@@ -13,16 +13,15 @@ struct SaleCSVTests {
           model: "MacBook Air, 13-inch",
           status: "Ready for Sale",
           grade: "B",
-          conditionNotes: "Marks on lid; called \"well used\"",
-          result: "ready"
+          conditionNotes: "Marks on lid; called \"well used\""
         ),
       ]
     )
 
     #expect(
       csv.contents == #"""
-      Serial,Asset Tag,Model,Status,Grade,Condition Notes,Result
-      "SERIAL-001","ASSET-001","MacBook Air, 13-inch","Ready for Sale","B","Marks on lid; called ""well used""","ready"
+      Serial,Asset Tag,Model,Status,Grade,Condition Notes
+      "SERIAL-001","ASSET-001","MacBook Air, 13-inch","Ready for Sale","B","Marks on lid; called ""well used"""
       """#
     )
   }

@@ -1,6 +1,11 @@
 import Foundation
 import SwiftData
 
+nonisolated enum DeviceProcessingOutcome: Equatable, Sendable {
+  case applied
+  case failed(String)
+}
+
 @MainActor
 protocol DeviceProcessingServicing {
   func deleteMDMRecord(_ request: MDMDeletionService.Request) async throws
@@ -75,24 +80,17 @@ struct DeviceProcessingCoordinator {
     targetStatusId: Int,
     targetStatusName: String,
     conditionField: String,
-    conditionNotesField: String
-  ) async {
-    guard item.canProcess else { return }
-
-    item.begin(statusId: targetStatusId, statusName: targetStatusName)
-    save()
-
+    conditionNotesField: String,
+    progress: (String) -> Void = { _ in }
+  ) async -> DeviceProcessingOutcome {
     guard let device, let assetId = device.snipeItId else {
-      item.fail(
-        stage: .validation,
-        error: IntegrationError(
+      return .failed(
+        IntegrationError(
           action: "process device",
           integration: "Snipe-IT",
           message: "No matching Snipe-IT asset is available"
-        )
+        ).localizedDescription
       )
-      save()
-      return
     }
 
     do {
@@ -100,19 +98,16 @@ struct DeviceProcessingCoordinator {
         $0.provider.processingOrder < $1.provider.processingOrder
       }) {
         try Task.checkCancellation()
-        item.operationMessage = "Deleting from \(record.provider.rawValue)"
-        save()
+        progress("Deleting from \(record.provider.rawValue)")
 
         let request = MDMDeletionService.Request(record: record)
         do {
           try await service.deleteMDMRecord(request)
         } catch {
-          item.fail(stage: .mdm, error: error)
-          save()
-          return
+          return .failed(error.localizedDescription)
         }
 
-        MDMDeletionService.removeLocally(
+        try MDMDeletionService.removeLocally(
           record,
           from: device,
           modelContext: modelContext
@@ -120,8 +115,7 @@ struct DeviceProcessingCoordinator {
       }
 
       try Task.checkCancellation()
-      item.operationMessage = "Updating Snipe-IT"
-      save()
+      progress("Updating Snipe-IT")
 
       let customFields = customFields(
         for: item,
@@ -131,22 +125,19 @@ struct DeviceProcessingCoordinator {
       let wasAssigned = device.assignedUserName != nil || device.assignedUserEmail != nil
 
       do {
-        if wasAssigned || item.snipeItCheckedIn {
-          let wasAlreadyCheckedIn = item.snipeItCheckedIn
-          if !item.snipeItCheckedIn {
-            try await service.checkInSnipeItAsset(assetId: assetId, statusId: targetStatusId)
-            item.snipeItCheckedIn = true
-            device.statusId = targetStatusId
-            device.status = targetStatusName
-            device.assignedUserName = nil
-            device.assignedUserEmail = nil
-            save()
-          }
-          if wasAlreadyCheckedIn || !customFields.isEmpty {
+        if wasAssigned {
+          try await service.checkInSnipeItAsset(assetId: assetId, statusId: targetStatusId)
+          device.statusId = targetStatusId
+          device.status = targetStatusName
+          device.assignedUserName = nil
+          device.assignedUserEmail = nil
+          try save()
+
+          if !customFields.isEmpty {
             try await service.updateSnipeItAsset(
               assetId: assetId,
-              statusId: wasAlreadyCheckedIn ? targetStatusId : nil,
-              customFields: customFields.isEmpty ? nil : customFields
+              statusId: nil,
+              customFields: customFields
             )
           }
         } else {
@@ -157,24 +148,17 @@ struct DeviceProcessingCoordinator {
           )
         }
       } catch {
-        item.fail(stage: .snipeIt, error: error)
-        save()
-        return
+        return .failed(error.localizedDescription)
       }
 
       device.statusId = targetStatusId
       device.status = targetStatusName
-      item.complete()
-      save()
+      try save()
+      return .applied
     } catch is CancellationError {
-      item.fail(
-        stage: .validation,
-        error: CancellationError()
-      )
-      save()
+      return .failed("Processing was cancelled.")
     } catch {
-      item.fail(stage: .validation, error: error)
-      save()
+      return .failed(error.localizedDescription)
     }
   }
 
@@ -195,7 +179,7 @@ struct DeviceProcessingCoordinator {
     return fields
   }
 
-  private func save() {
-    try? modelContext.save()
+  private func save() throws {
+    try modelContext.save()
   }
 }

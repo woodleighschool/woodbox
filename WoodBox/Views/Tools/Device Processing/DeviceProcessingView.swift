@@ -2,6 +2,18 @@ import SwiftData
 import SwiftUI
 
 struct DeviceProcessingView: View {
+  private enum PresentedSheet: Identifiable {
+    case capture(DeviceProcessingCapture)
+    case application(DeviceProcessingApplication)
+
+    var id: UUID {
+      switch self {
+      case let .capture(capture): capture.id
+      case let .application(application): application.id
+      }
+    }
+  }
+
   @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
 
@@ -16,11 +28,9 @@ struct DeviceProcessingView: View {
   @State private var selectedStatusId: Int?
   @State private var searchQuery = ""
   @State private var scannerInput = ""
-  @State private var isProcessing = false
-  @State private var showApplyConfirmation = false
   @State private var showClearConfirmation = false
   @State private var alertItem: AlertItem?
-  @State private var capture: DeviceProcessingCapture?
+  @State private var presentedSheet: PresentedSheet?
 
   #if os(macOS)
     @FocusState private var scannerInputFocused: Bool
@@ -35,18 +45,13 @@ struct DeviceProcessingView: View {
     return statuses.first { $0.snipeItId == selectedStatusId }
   }
 
-  private var pendingItems: [DeviceProcessingItem] {
-    items.filter { $0.state != .completed && $0.state != .processing }
-  }
-
   private var searchResults: [Device] {
     modelContext.searchDevices(matching: searchQuery)
   }
 
   private var isApplyDisabled: Bool {
     targetStatus == nil
-      || pendingItems.isEmpty
-      || isProcessing
+      || items.isEmpty
   }
 
   var body: some View {
@@ -68,18 +73,6 @@ struct DeviceProcessingView: View {
         searchQuery = ""
       }
       .confirmationDialog(
-        "Process \(pendingItems.count) \(pendingItems.count == 1 ? "Device" : "Devices")?",
-        isPresented: $showApplyConfirmation,
-        titleVisibility: .visible
-      ) {
-        Button("Delete from MDM and Apply Status", role: .destructive) {
-          Task { await processPendingItems() }
-        }
-        Button("Cancel", role: .cancel) {}
-      } message: {
-        Text(confirmationMessage)
-      }
-      .confirmationDialog(
         "Clear \(profile.title) Queue?",
         isPresented: $showClearConfirmation,
         titleVisibility: .visible
@@ -96,22 +89,32 @@ struct DeviceProcessingView: View {
           dismissButton: .default(Text("OK"))
         )
       }
-      .sheet(item: $capture) { capture in
-        #if os(iOS)
-          DeviceProcessingCaptureView(
-            profile: profile,
-            start: capture.start,
-            candidate: resolveCandidate,
-            commit: commit
-          )
-          .presentationDetents([.medium, .large])
-          .presentationDragIndicator(.visible)
-        #else
-          DeviceProcessingCaptureView(
-            start: capture.start,
-            commit: commit
-          )
-        #endif
+      .sheet(item: $presentedSheet) { sheet in
+        switch sheet {
+        case let .capture(capture):
+          #if os(iOS)
+            DeviceProcessingCaptureView(
+              profile: profile,
+              start: capture.start,
+              candidate: resolveCandidate,
+              commit: commit
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+          #else
+            DeviceProcessingCaptureView(
+              start: capture.start,
+              commit: commit
+            )
+          #endif
+
+        case let .application(application):
+          DeviceProcessingApplyView(items: items, application: application)
+          #if os(iOS)
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+          #endif
+        }
       }
       .onChange(of: statuses.map(\.snipeItId), initial: true) { _, _ in
         restoreStatusSelection()
@@ -139,36 +142,14 @@ struct DeviceProcessingView: View {
           ContentUnavailableView {
             Label("No Devices", systemImage: "barcode.viewfinder")
           } description: {
-            Text("Search or scan to build the \(profile.title.lowercased()) queue.")
-          } actions: {
-            Button {
-              capture = DeviceProcessingCapture(start: .scanner)
-            } label: {
-              Label("Start Scanning", systemImage: "camera.viewfinder")
-            }
-            .buttonStyle(.borderedProminent)
+            Text("Use Search or Scan to build the \(profile.title.lowercased()) queue.")
           }
           .frame(maxWidth: .infinity)
           .listRowBackground(Color.clear)
         } else {
           Section("Devices") {
             ForEach(items) { item in
-              if profile.requiresCondition {
-                NavigationLink {
-                  SaleConditionEditor(item: item)
-                } label: {
-                  DeviceProcessingItemRow(item: item)
-                }
-                .disabled(item.state == .processing || item.state == .completed)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                  removeButton(for: item)
-                }
-              } else {
-                DeviceProcessingItemRow(item: item)
-                  .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    removeButton(for: item)
-                  }
-              }
+              DeviceProcessingQueueRow(item: item)
             }
           }
         }
@@ -184,7 +165,6 @@ struct DeviceProcessingView: View {
     private var destinationSection: some View {
       Section {
         SnipeStatusPicker("Apply Status", selection: $selectedStatusId, includesNoChange: false)
-          .disabled(isProcessing)
       } header: {
         Text("Destination")
       }
@@ -194,9 +174,8 @@ struct DeviceProcessingView: View {
     private var iOSToolbar: some ToolbarContent {
       ToolbarItem(placement: .topBarTrailing) {
         Button("Scan", systemImage: "camera.viewfinder") {
-          capture = DeviceProcessingCapture(start: .scanner)
+          presentCapture(start: .scanner)
         }
-        .disabled(isProcessing)
       }
 
       ToolbarItem(placement: .topBarTrailing) {
@@ -210,31 +189,19 @@ struct DeviceProcessingView: View {
           Button("Clear Queue", systemImage: "trash", role: .destructive) {
             showClearConfirmation = true
           }
-          .disabled(items.isEmpty || isProcessing)
+          .disabled(items.isEmpty)
         } label: {
           Label("More", systemImage: "ellipsis.circle")
         }
       }
 
       ToolbarItem(placement: .confirmationAction) {
-        if isProcessing {
-          ProgressView().controlSize(.small)
-        } else {
-          Button("Apply") {
-            showApplyConfirmation = true
-          }
+        Button("Apply", action: presentApplication)
           .disabled(isApplyDisabled)
           .buttonStyle(.borderedProminent)
-        }
       }
     }
 
-    private func removeButton(for item: DeviceProcessingItem) -> some View {
-      Button("Remove", systemImage: "trash", role: .destructive) {
-        remove(item)
-      }
-      .disabled(item.state == .processing)
-    }
   #else
     private var macOSContent: some View {
       VStack(spacing: 0) {
@@ -265,13 +232,12 @@ struct DeviceProcessingView: View {
           .onSubmit(addScannerInput)
 
         Button("Add", systemImage: "plus", action: addScannerInput)
-          .disabled(scannerInput.nilIfEmpty == nil || isProcessing)
+          .disabled(scannerInput.nilIfEmpty == nil)
 
         Divider().frame(height: 20)
 
         SnipeStatusPicker("Apply Status", selection: $selectedStatusId, includesNoChange: false)
           .frame(minWidth: 220)
-          .disabled(isProcessing)
       }
       .padding(12)
     }
@@ -289,34 +255,14 @@ struct DeviceProcessingView: View {
         Button("Clear Queue", systemImage: "trash", role: .destructive) {
           showClearConfirmation = true
         }
-        .disabled(items.isEmpty || isProcessing)
+        .disabled(items.isEmpty)
 
-        if isProcessing {
-          ProgressView().controlSize(.small)
-        } else {
-          Button("Apply", systemImage: "checkmark") {
-            showApplyConfirmation = true
-          }
+        Button("Apply", systemImage: "checkmark", action: presentApplication)
           .disabled(isApplyDisabled)
           .keyboardShortcut(.return, modifiers: [.command])
-        }
       }
     }
   #endif
-
-  private var confirmationMessage: String {
-    guard let targetStatus else { return "Choose a Snipe-IT status first." }
-
-    let providers = pendingItems
-      .compactMap(device(for:))
-      .flatMap(\.mdmProviderNames)
-    let providerNames = Array(Set(providers)).sorted()
-    let deletionDescription = providerNames.isEmpty
-      ? "No cached MDM records will be deleted."
-      : "The devices will be deleted from \(providerNames.joined(separator: " and "))."
-
-    return "\(deletionDescription) Snipe-IT status “\(targetStatus.name)” will then be applied."
-  }
 
   private func restoreStatusSelection() {
     guard !statuses.isEmpty else { return }
@@ -349,7 +295,7 @@ struct DeviceProcessingView: View {
         try commit(.restock(device))
       case .sale:
         try validate(device)
-        capture = DeviceProcessingCapture(start: .condition(device))
+        presentCapture(start: .condition(device))
       }
     } catch {
       present(error)
@@ -386,50 +332,33 @@ struct DeviceProcessingView: View {
     alertItem = AlertItem(title: "Unable to Add Device", message: error.localizedDescription)
   }
 
-  private func device(for item: DeviceProcessingItem) -> Device? {
-    modelContext.fetchDevice(matching: item.serial, scanType: .serial)
-  }
-
   private func remove(_ item: DeviceProcessingItem) {
-    guard item.state != .processing else { return }
     modelContext.delete(item)
     try? modelContext.save()
   }
 
   private func clearItems() {
-    items.filter { $0.state != .processing }.forEach(modelContext.delete)
+    items.forEach(modelContext.delete)
     try? modelContext.save()
     selectedStatusId = modelData.settings.lastTargetStatusId(for: profile)
   }
 
-  @MainActor
-  private func processPendingItems() async {
-    guard !isProcessing, let targetStatus else { return }
-    isProcessing = true
-    defer { isProcessing = false }
+  private func presentCapture(start: DeviceProcessingCapture.Start) {
+    presentedSheet = .capture(DeviceProcessingCapture(start: start))
+  }
 
-    let coordinator = DeviceProcessingCoordinator(
-      service: LiveDeviceProcessingService(settings: modelData.settings),
-      modelContext: modelContext
-    )
-
-    for item in pendingItems {
-      guard !Task.isCancelled else { break }
-      await coordinator.process(
-        item: item,
-        device: device(for: item),
-        targetStatusId: targetStatus.snipeItId,
-        targetStatusName: targetStatus.name,
-        conditionField: modelData.settings.snipeItConditionField,
-        conditionNotesField: modelData.settings.snipeItConditionNotesField
+  private func presentApplication() {
+    guard let targetStatus else { return }
+    presentedSheet = .application(
+      DeviceProcessingApplication(
+        statusId: targetStatus.snipeItId,
+        statusName: targetStatus.name
       )
-    }
-
-    await modelData.cacheManager.sync()
+    )
   }
 
   private var saleCSV: SaleCSV? {
     guard profile == .sale, !items.isEmpty else { return nil }
-    return SaleCSV(items: items, fallbackStatusName: targetStatus?.name)
+    return SaleCSV(items: items, statusName: targetStatus?.name)
   }
 }

@@ -34,7 +34,8 @@ struct MDMDeletionServiceTests {
     try context.save()
 
     let request = MDMDeletionService.Request(record: jamfRecord)
-    MDMDeletionService.removeLocally(
+    let localRecord = MDMDeletionService.LocalRecord(record: jamfRecord)
+    try MDMDeletionService.removeLocally(
       jamfRecord,
       from: device,
       modelContext: context
@@ -47,5 +48,14 @@ struct MDMDeletionServiceTests {
 
     let persistedRecords = try context.fetch(FetchDescriptor<MDMRecord>())
     #expect(persistedRecords.map(\.id) == [intuneRecord.id])
+
+    let restored = try MDMDeletionService.restoreLocally(
+      localRecord,
+      to: device,
+      modelContext: context
+    )
+    #expect(restored.provider == .jamf)
+    #expect(restored.deviceId == "101")
+    #expect(Set(device.mdmRecords.map(\.id)) == Set([intuneRecord.id, restored.id]))
   }
 }

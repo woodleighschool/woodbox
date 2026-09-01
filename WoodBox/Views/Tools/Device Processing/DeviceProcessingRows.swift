@@ -22,44 +22,56 @@ struct DeviceSearchResultLabel: View {
 }
 
 #if os(iOS)
-  struct DeviceProcessingItemRow: View {
+  struct DeviceProcessingQueueRow: View {
+    @Environment(\.modelContext) private var modelContext
+
     let item: DeviceProcessingItem
 
     var body: some View {
-      HStack(spacing: 12) {
-        Image(systemName: Device.symbolName(for: item.deviceModel))
-          .font(.title3)
-          .frame(width: 32)
-          .foregroundStyle(.tint)
-
-        VStack(alignment: .leading, spacing: 3) {
-          DeviceNameText(name: item.deviceName)
-            .font(.headline)
-          Text(item.deviceModel)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-
-          DeviceIdentifiersRow(assetTag: item.assetTag, serial: item.serial)
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.secondary)
-
-          if item.profile.requiresCondition {
-            conditionDetails
-              .font(.caption)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
+      Group {
+        if item.profile.requiresCondition {
+          NavigationLink {
+            SaleConditionEditor(item: item, device: device)
+          } label: {
+            DeviceProcessingItemRow(item: item, device: device)
           }
-
-          if let errorMessage = item.errorMessage {
-            Text(errorMessage)
-              .font(.caption)
-              .foregroundStyle(.red)
-              .lineLimit(2)
-          }
+        } else {
+          DeviceProcessingItemRow(item: item, device: device)
         }
+      }
+      .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        Button("Remove", systemImage: "trash", role: .destructive, action: remove)
+      }
+    }
 
-        Spacer(minLength: 8)
-        DeviceProcessingStateView(item: item)
+    private func remove() {
+      modelContext.delete(item)
+      try? modelContext.save()
+    }
+
+    private var device: Device? {
+      modelContext.fetchDevice(matching: item.serial, scanType: .serial)
+    }
+  }
+
+  struct DeviceProcessingItemRow: View {
+    let item: DeviceProcessingItem
+    let device: Device?
+
+    var body: some View {
+      DeviceIdentityLabel(
+        device: device,
+        name: item.deviceName,
+        model: item.deviceModel,
+        assetTag: item.assetTag,
+        serial: item.serial
+      ) {
+        if item.profile.requiresCondition {
+          conditionDetails
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
       }
       .padding(.vertical, 2)
     }
@@ -78,32 +90,9 @@ struct DeviceSearchResultLabel: View {
   }
 #endif
 
-struct DeviceProcessingStateView: View {
-  let item: DeviceProcessingItem
-
-  var body: some View {
-    switch item.state {
-    case .ready:
-      Image(systemName: "circle")
-        .foregroundStyle(.secondary)
-        .accessibilityLabel("Ready")
-    case .processing:
-      ProgressView()
-        .controlSize(.small)
-        .accessibilityLabel(item.operationMessage ?? "Processing")
-    case .completed:
-      Image(systemName: "checkmark.circle.fill")
-        .foregroundStyle(.green)
-        .accessibilityLabel("Complete")
-    case .failed:
-      Image(systemName: "exclamationmark.circle.fill")
-        .foregroundStyle(.red)
-        .accessibilityLabel("Failed")
-    }
-  }
-}
-
 struct SaleConditionForm: View {
+  let device: Device?
+  let name: String?
   let assetTag: String
   let serial: String
   let model: String
@@ -113,15 +102,18 @@ struct SaleConditionForm: View {
 
   var body: some View {
     Form {
-      Section("Device") {
-        LabeledContent("Asset Tag", value: assetTag)
-        LabeledContent("Serial", value: serial)
-        LabeledContent("Model", value: model)
+      Section {
+        DeviceIdentityLabel(
+          device: device,
+          name: name,
+          model: model,
+          assetTag: assetTag,
+          serial: serial
+        )
       }
 
       Section("Condition") {
         Picker("Grade", selection: $grade) {
-          Text("Choose").tag(nil as SaleGrade?)
           ForEach(SaleGrade.allCases, id: \.self) { grade in
             Text(grade.rawValue).tag(grade as SaleGrade?)
           }
@@ -134,7 +126,7 @@ struct SaleConditionForm: View {
           prompt: Text("Describe visible wear, damage, or missing parts"),
           axis: .vertical
         )
-        .lineLimit(3 ... 6)
+        .lineLimit(2 ... 4)
       }
     }
     .formStyle(.grouped)
@@ -147,12 +139,14 @@ struct SaleConditionForm: View {
     @Environment(\.modelContext) private var modelContext
 
     let item: DeviceProcessingItem
+    let device: Device?
 
     @State private var grade: SaleGrade?
     @State private var notes: String
 
-    init(item: DeviceProcessingItem) {
+    init(item: DeviceProcessingItem, device: Device?) {
       self.item = item
+      self.device = device
       _grade = State(initialValue: item.grade)
       _notes = State(initialValue: item.conditionNotes)
     }
@@ -163,6 +157,8 @@ struct SaleConditionForm: View {
 
     var body: some View {
       SaleConditionForm(
+        device: device,
+        name: item.deviceName,
         assetTag: item.assetTag,
         serial: item.serial,
         model: item.deviceModel,
@@ -183,9 +179,6 @@ struct SaleConditionForm: View {
     private func save() {
       item.grade = grade
       item.conditionNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-      if item.state == .failed {
-        item.prepareForRetry()
-      }
       try? modelContext.save()
       dismiss()
     }
@@ -228,33 +221,14 @@ struct SaleConditionForm: View {
           .width(min: 180, ideal: 320)
         }
 
-        TableColumn("Result") { item in
-          HStack(spacing: 6) {
-            DeviceProcessingStateView(item: item)
-            Text(resultText(for: item))
-              .lineLimit(1)
-          }
-        }
-        .width(min: 110, ideal: 180)
-
         TableColumn("") { item in
           Button("Remove", systemImage: "trash", role: .destructive) {
             onRemove(item)
           }
           .labelStyle(.iconOnly)
           .buttonStyle(.borderless)
-          .disabled(item.state == .processing)
         }
         .width(32)
-      }
-    }
-
-    private func resultText(for item: DeviceProcessingItem) -> String {
-      switch item.state {
-      case .ready: "Ready"
-      case .processing: item.operationMessage ?? "Processing"
-      case .completed: "Complete"
-      case .failed: item.errorMessage ?? "Failed"
       }
     }
   }
@@ -270,11 +244,7 @@ struct SaleConditionForm: View {
         }
       }
       .labelsHidden()
-      .disabled(item.state == .processing || item.state == .completed)
       .onChange(of: item.gradeRawValue) { _, _ in
-        if item.state == .failed {
-          item.prepareForRetry()
-        }
         try? modelContext.save()
       }
     }
@@ -286,11 +256,7 @@ struct SaleConditionForm: View {
 
     var body: some View {
       TextField("Condition notes", text: $item.conditionNotes)
-        .disabled(item.state == .processing || item.state == .completed)
         .onSubmit {
-          if item.state == .failed {
-            item.prepareForRetry()
-          }
           item.conditionNotes = item.conditionNotes.trimmingCharacters(in: .whitespacesAndNewlines)
           try? modelContext.save()
         }

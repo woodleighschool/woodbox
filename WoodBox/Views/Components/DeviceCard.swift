@@ -9,10 +9,6 @@ struct DeviceSummaryItem<Accessory: View>: View {
   var onClear: (() -> Void)?
   @ViewBuilder var accessory: () -> Accessory
 
-  #if os(iOS)
-    @State private var isDetailPresented = false
-  #endif
-
   // MARK: - Initialization
 
   init(
@@ -36,18 +32,7 @@ struct DeviceSummaryItem<Accessory: View>: View {
       clearButton
     }
     .contentShape(Rectangle())
-    #if os(iOS)
-      .onLongPressGesture(minimumDuration: 0.35) {
-        guard device != nil else { return }
-        isDetailPresented = true
-      }
-      .sheet(isPresented: $isDetailPresented) {
-        if let device {
-          DeviceDetailSheet(device: device)
-            .presentationDetents([.medium, .large])
-        }
-      }
-    #endif
+    .deviceDetails(device)
   }
 
   // MARK: - View Builders
@@ -120,6 +105,59 @@ struct DeviceSummaryItem<Accessory: View>: View {
   }
 }
 
+struct DeviceIdentityLabel<Details: View>: View {
+  let device: Device?
+  let name: String?
+  let model: String
+  let assetTag: String
+  let serial: String
+  @ViewBuilder let details: Details
+
+  var body: some View {
+    HStack(alignment: .center, spacing: 12) {
+      Image(systemName: Device.symbolName(for: model))
+        .font(.title3.weight(.semibold))
+        .frame(width: 40, height: 40)
+        .foregroundStyle(.tint)
+        .symbolRenderingMode(.hierarchical)
+
+      VStack(alignment: .leading, spacing: 3) {
+        if let name = name.nilIfEmpty {
+          Text(name)
+            .font(.headline)
+            .lineLimit(1)
+
+          Text(model)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        } else {
+          Text(model)
+            .font(.headline)
+            .lineLimit(1)
+        }
+
+        DeviceIdentifiersRow(assetTag: assetTag, serial: serial)
+          .font(.caption.monospacedDigit())
+          .foregroundStyle(.secondary)
+
+        details
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .contentShape(Rectangle())
+    .deviceDetails(device)
+  }
+}
+
+extension DeviceIdentityLabel where Details == EmptyView {
+  init(device: Device?, name: String?, model: String, assetTag: String, serial: String) {
+    self.init(device: device, name: name, model: model, assetTag: assetTag, serial: serial) {
+      EmptyView()
+    }
+  }
+}
+
 struct DeviceIdentifiersRow: View {
   let assetTag: String
   let serial: String
@@ -129,12 +167,36 @@ struct DeviceIdentifiersRow: View {
       Label(assetTag, systemImage: "barcode")
       Label(serial, systemImage: "number")
     }
+    .lineLimit(1)
   }
 }
 
 // MARK: - DeviceDetailSheet
 
 #if os(iOS)
+  private struct DeviceDetailsPresenter: ViewModifier {
+    let device: Device?
+
+    @State private var isPresented = false
+
+    func body(content: Content) -> some View {
+      content
+        .highPriorityGesture(
+          LongPressGesture(minimumDuration: 0.35)
+            .onEnded { _ in
+              guard device != nil else { return }
+              isPresented = true
+            }
+        )
+        .sheet(isPresented: $isPresented) {
+          if let device {
+            DeviceDetailSheet(device: device)
+              .presentationDetents([.medium, .large])
+          }
+        }
+    }
+  }
+
   private struct DeviceDetailSheet: View {
     // MARK: - Properties
 
@@ -243,3 +305,14 @@ struct DeviceIdentifiersRow: View {
     }
   }
 #endif
+
+private extension View {
+  @ViewBuilder
+  func deviceDetails(_ device: Device?) -> some View {
+    #if os(iOS)
+      modifier(DeviceDetailsPresenter(device: device))
+    #else
+      self
+    #endif
+  }
+}

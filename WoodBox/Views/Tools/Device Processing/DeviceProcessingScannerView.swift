@@ -94,15 +94,17 @@ struct DeviceProcessingCaptureView: View {
             ? "Grade each device as you scan"
             : "Keep scanning to build the queue",
           trigger: feedbackTrigger,
-          onClose: { dismiss() },
           onCandidate: handleCandidate
         )
+        .transition(.move(edge: .leading).combined(with: .opacity))
       #else
         EmptyView()
       #endif
 
     case let .condition(device):
       SaleConditionForm(
+        device: device,
+        name: device.name,
         assetTag: device.assetTag,
         serial: device.serial,
         model: device.model,
@@ -115,8 +117,10 @@ struct DeviceProcessingCaptureView: View {
         .scrollDismissesKeyboard(.interactively)
       #endif
         .toolbar {
-          ToolbarItem(placement: .cancellationAction) {
-            Button("Cancel", action: cancelCondition)
+          if returnsToScanner {
+            ToolbarItem(placement: .cancellationAction) {
+              Button("Scan", systemImage: "chevron.backward", action: showScanner)
+            }
           }
           ToolbarItem(placement: .confirmationAction) {
             Button("Save") {
@@ -125,6 +129,7 @@ struct DeviceProcessingCaptureView: View {
             .disabled(grade == nil)
           }
         }
+        .transition(.move(edge: .trailing).combined(with: .opacity))
     }
   }
 
@@ -139,7 +144,9 @@ struct DeviceProcessingCaptureView: View {
         case .sale:
           grade = nil
           notes = ""
-          phase = .condition(device)
+          withAnimation(.snappy) {
+            phase = .condition(device)
+          }
         }
       } catch {
         alertItem = AlertItem(title: "Unable to Add Device", message: error.localizedDescription)
@@ -147,13 +154,11 @@ struct DeviceProcessingCaptureView: View {
     }
   #endif
 
-  private func cancelCondition() {
+  private func showScanner() {
     grade = nil
     notes = ""
-    if returnsToScanner {
+    withAnimation(.snappy) {
       phase = .scanner
-    } else {
-      dismiss()
     }
   }
 
@@ -166,7 +171,9 @@ struct DeviceProcessingCaptureView: View {
       self.grade = nil
       notes = ""
       if returnsToScanner {
-        phase = .scanner
+        withAnimation(.snappy) {
+          phase = .scanner
+        }
       } else {
         dismiss()
       }

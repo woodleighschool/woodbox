@@ -23,6 +23,23 @@ enum MDMDeletionService {
     }
   }
 
+  struct LocalRecord: Equatable, Sendable {
+    let provider: MDMProvider
+    let deviceId: String
+    let deviceName: String?
+    let lastCheckIn: Date?
+    let jamfDeviceType: JamfDeviceType?
+
+    @MainActor
+    init(record: MDMRecord) {
+      provider = record.provider
+      deviceId = record.deviceId
+      deviceName = record.deviceName
+      lastCheckIn = record.lastCheckIn
+      jamfDeviceType = record.jamfDeviceType
+    }
+  }
+
   @MainActor
   static func delete(_ request: Request) async throws {
     let settings = AppSettings.shared
@@ -67,9 +84,29 @@ enum MDMDeletionService {
     _ record: MDMRecord,
     from device: Device,
     modelContext: ModelContext
-  ) {
+  ) throws {
     device.mdmRecords.removeAll { $0.id == record.id }
     modelContext.delete(record)
-    try? modelContext.save()
+    try modelContext.save()
+  }
+
+  @MainActor
+  @discardableResult
+  static func restoreLocally(
+    _ record: LocalRecord,
+    to device: Device,
+    modelContext: ModelContext
+  ) throws -> MDMRecord {
+    let restored = MDMRecord(
+      provider: record.provider,
+      deviceId: record.deviceId,
+      deviceName: record.deviceName,
+      lastCheckIn: record.lastCheckIn,
+      jamfDeviceType: record.jamfDeviceType
+    )
+    device.mdmRecords.append(restored)
+    modelContext.insert(restored)
+    try modelContext.save()
+    return restored
   }
 }
