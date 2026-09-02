@@ -180,11 +180,7 @@ struct DeviceProcessingView: View {
 
       ToolbarItem(placement: .topBarTrailing) {
         Menu {
-          if let saleCSV {
-            ShareLink(item: saleCSV, preview: SharePreview("Sale Devices")) {
-              Label("Export CSV", systemImage: "square.and.arrow.up")
-            }
-          }
+          exportLink
 
           Button("Clear Queue", systemImage: "trash", role: .destructive) {
             showClearConfirmation = true
@@ -245,12 +241,7 @@ struct DeviceProcessingView: View {
     @ToolbarContentBuilder
     private var macOSToolbar: some ToolbarContent {
       ToolbarItemGroup(placement: .primaryAction) {
-        if let saleCSV {
-          ShareLink(item: saleCSV, preview: SharePreview("Sale Devices")) {
-            Label("Export CSV", systemImage: "square.and.arrow.up")
-          }
-          .disabled(items.isEmpty)
-        }
+        exportLink
 
         Button("Clear Queue", systemImage: "trash", role: .destructive) {
           showClearConfirmation = true
@@ -357,8 +348,15 @@ struct DeviceProcessingView: View {
     )
   }
 
-  private var saleCSV: SaleCSV? {
-    guard profile == .sale, !items.isEmpty else { return nil }
-    return SaleCSV(items: items, statusName: targetStatus?.name)
+  @ViewBuilder
+  private var exportLink: some View {
+    if !items.isEmpty {
+      ShareLink(
+        item: DeviceProcessingCSV(items: items, statusName: targetStatus?.name),
+        preview: SharePreview("\(profile.title) Devices")
+      ) {
+        Label("Export CSV", systemImage: "square.and.arrow.up")
+      }
+    }
   }
 }

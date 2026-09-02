@@ -2,7 +2,7 @@ import CoreTransferable
 import Foundation
 import UniformTypeIdentifiers
 
-nonisolated struct SaleCSV: Transferable {
+nonisolated struct DeviceProcessingCSV: Transferable {
   struct Row: Sendable {
     let serial: String
     let assetTag: String
@@ -32,11 +32,10 @@ nonisolated struct SaleCSV: Transferable {
   }
 
   static var transferRepresentation: some TransferRepresentation {
-    FileRepresentation(exportedContentType: .commaSeparatedText) { csv in
-      let url = FileManager.default.temporaryDirectory.appending(path: "sale-devices.csv")
-      try csv.contents.write(to: url, atomically: true, encoding: .utf8)
-      return SentTransferredFile(url)
+    DataRepresentation(exportedContentType: .commaSeparatedText) { csv in
+      Data(csv.contents.utf8)
     }
+    .suggestedFileName("devices.csv")
   }
 
   private static func escape(_ value: String) -> String {
@@ -44,7 +43,7 @@ nonisolated struct SaleCSV: Transferable {
   }
 }
 
-extension SaleCSV {
+extension DeviceProcessingCSV {
   @MainActor
   init(items: [DeviceProcessingItem], statusName: String?) {
     rows = items.map { item in
