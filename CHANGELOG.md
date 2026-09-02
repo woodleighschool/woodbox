@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.5.0](https://github.com/woodleighschool/woodbox/compare/2.4.0...2.5.0) (2026-09-02)
+
+
+### Features
+
+* overhaul device workflows ([#8](https://github.com/woodleighschool/woodbox/issues/8)) ([0ac4803](https://github.com/woodleighschool/woodbox/commit/0ac48034336149e9d0a1c70bb3a8b63d9bf2c29e))
+* share CSV export across restock and sale ([33aad9f](https://github.com/woodleighschool/woodbox/commit/33aad9f673a3c23ad08c3ed2c9f36d965ac32727))
+
+
+### Bug Fixes
+
+* keep device queues reusable ([b3cf3b3](https://github.com/woodleighschool/woodbox/commit/b3cf3b3169266595fd686ff1a74213acce6e2a97))
+
+
+### Documentation
+
+* clarify usage and releases ([eaa74d2](https://github.com/woodleighschool/woodbox/commit/eaa74d2e94d38ad1e9dad341bb5054189ad46344))
+
+
+### Continuous Integration
+
+* **github-action:** update action jdx/mise-action (v4.2.5 → v4.3.0) ([#6](https://github.com/woodleighschool/woodbox/issues/6)) ([fab317c](https://github.com/woodleighschool/woodbox/commit/fab317c3de13a7988ba22f7463339dd065c13ea0))
+
+
+### Miscellaneous Chores
+
+* fresh mise lock ([0c63c22](https://github.com/woodleighschool/woodbox/commit/0c63c22b1e61a4a1c3b5b781e205983d4d290971))
+* **mise:** update tool lefthook (2.1.11 → 2.1.12) ([#9](https://github.com/woodleighschool/woodbox/issues/9)) ([baf0aec](https://github.com/woodleighschool/woodbox/commit/baf0aec6366d1e64181b6a1cbc81057b3102ab7a))
+* **mise:** update tool oxfmt (0.64.0 → 0.65.0) ([#4](https://github.com/woodleighschool/woodbox/issues/4)) ([4a4e64b](https://github.com/woodleighschool/woodbox/commit/4a4e64b56ba68061bab872e039dff992279e29a1))
+
 ## [2.4.0](https://github.com/woodleighschool/woodbox/compare/2.3.1...2.4.0) (2026-08-25)
 
 
