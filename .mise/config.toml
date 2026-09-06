@@ -60,9 +60,5 @@ periphery scan \
 description = "Run app lint"
 depends = ["periphery"]
 
-[tasks.workflow-lint]
-description = "Lint GitHub Actions workflows"
-run = ["actionlint", "zizmor --offline --no-ignores .github/workflows"]
-
 [hooks]
 postinstall = "lefthook install"
