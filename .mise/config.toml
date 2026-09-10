@@ -4,7 +4,7 @@ swiftformat = "0.63.0"
 lefthook = "2.1.12"
 actionlint = "1.7.12"
 zizmor = "1.30.0"
-oxfmt = "0.66.0"
+oxfmt = "0.67.0"
 "npm:@commitlint/cli" = "21.2.2"
 
 [settings]
