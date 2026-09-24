@@ -1,5 +1,52 @@
 # Changelog
 
+## [2.5.0](https://github.com/woodleighschool/woodbox/compare/2.4.0...2.5.0) (2026-09-24)
+
+
+### Features
+
+* overhaul device workflows ([#8](https://github.com/woodleighschool/woodbox/issues/8)) ([0ac4803](https://github.com/woodleighschool/woodbox/commit/0ac48034336149e9d0a1c70bb3a8b63d9bf2c29e))
+* share CSV export across restock and sale ([33aad9f](https://github.com/woodleighschool/woodbox/commit/33aad9f673a3c23ad08c3ed2c9f36d965ac32727))
+
+
+### Bug Fixes
+
+* keep device queues reusable ([b3cf3b3](https://github.com/woodleighschool/woodbox/commit/b3cf3b3169266595fd686ff1a74213acce6e2a97))
+
+
+### Code Refactoring
+
+* remove legacy Keychain migration ([#7](https://github.com/woodleighschool/woodbox/issues/7)) ([a16fcad](https://github.com/woodleighschool/woodbox/commit/a16fcadcff0265ef5f44bc907ef1d4cbeb73f191))
+
+
+### Documentation
+
+* clarify usage and releases ([eaa74d2](https://github.com/woodleighschool/woodbox/commit/eaa74d2e94d38ad1e9dad341bb5054189ad46344))
+
+
+### Continuous Integration
+
+* avoid redundant release metadata checks ([90fd56d](https://github.com/woodleighschool/woodbox/commit/90fd56d34f49476979b26b018f18eafe97bb4506))
+* **github-action:** update action jdx/mise-action (v4.2.5 → v4.3.0) ([#6](https://github.com/woodleighschool/woodbox/issues/6)) ([fab317c](https://github.com/woodleighschool/woodbox/commit/fab317c3de13a7988ba22f7463339dd065c13ea0))
+
+
+### Miscellaneous Chores
+
+* fresh mise lock ([0c63c22](https://github.com/woodleighschool/woodbox/commit/0c63c22b1e61a4a1c3b5b781e205983d4d290971))
+* **github-action:** Update action home-operations/.github/actions/workflow-lint (v1.0.3 → v1.0.4) ([#16](https://github.com/woodleighschool/woodbox/issues/16)) ([77fa003](https://github.com/woodleighschool/woodbox/commit/77fa003081a1ea3596c84fbc6e9ed270ad86df42))
+* **github-action:** update action ubuntu (24.04 → 26.04) ([#15](https://github.com/woodleighschool/woodbox/issues/15)) ([a9c481b](https://github.com/woodleighschool/woodbox/commit/a9c481bc597ae9df312224cb154a607b60bc7bf2))
+* **mise:** update mise tools ([#10](https://github.com/woodleighschool/woodbox/issues/10)) ([0f13bb2](https://github.com/woodleighschool/woodbox/commit/0f13bb2b7bd1e5ae5901b88d2fe2734a922e2eae))
+* **mise:** update tool lefthook (2.1.11 → 2.1.12) ([#9](https://github.com/woodleighschool/woodbox/issues/9)) ([baf0aec](https://github.com/woodleighschool/woodbox/commit/baf0aec6366d1e64181b6a1cbc81057b3102ab7a))
+* **mise:** update tool lefthook (2.1.12 → 2.1.14) ([#13](https://github.com/woodleighschool/woodbox/issues/13)) ([49fcd14](https://github.com/woodleighschool/woodbox/commit/49fcd148fc7349d3948f3dc0cd24d6f2937815a8))
+* **mise:** update tool npm:@commitlint/cli (21.2.2 → 21.2.3) ([#17](https://github.com/woodleighschool/woodbox/issues/17)) ([a6a6df5](https://github.com/woodleighschool/woodbox/commit/a6a6df5a679a58c948c79560755c6907d93fa988))
+* **mise:** update tool oxfmt (0.64.0 → 0.65.0) ([#4](https://github.com/woodleighschool/woodbox/issues/4)) ([4a4e64b](https://github.com/woodleighschool/woodbox/commit/4a4e64b56ba68061bab872e039dff992279e29a1))
+* **mise:** update tool oxfmt (0.66.0 → 0.67.0) ([#11](https://github.com/woodleighschool/woodbox/issues/11)) ([4409989](https://github.com/woodleighschool/woodbox/commit/4409989c899601c458442764cc315571a272d82c))
+* **mise:** update tool oxfmt (0.67.0 → 0.68.0) ([#14](https://github.com/woodleighschool/woodbox/issues/14)) ([64bfbbb](https://github.com/woodleighschool/woodbox/commit/64bfbbbac112a55845a5cb3dae1279bb4710cc50))
+* **mise:** update tool oxfmt (0.68.0 → 0.69.0) ([#18](https://github.com/woodleighschool/woodbox/issues/18)) ([28c8eb7](https://github.com/woodleighschool/woodbox/commit/28c8eb7c8d63e1f7965b4da4a1cc2263e7e65f8e))
+* **mise:** update tool oxfmt (0.69.0 → 0.70.0) ([#19](https://github.com/woodleighschool/woodbox/issues/19)) ([b4fa921](https://github.com/woodleighschool/woodbox/commit/b4fa921c11f2288722f3647ca196cd29b79d1e1b))
+* **mise:** update tool zizmor (1.30.0 → 1.30.1) ([#12](https://github.com/woodleighschool/woodbox/issues/12)) ([c6c3dbb](https://github.com/woodleighschool/woodbox/commit/c6c3dbbaa3a65315bc7b9659286bd626d99a80e1))
+* remove redundant workflow lint task ([10b381e](https://github.com/woodleighschool/woodbox/commit/10b381ec3fa216afdc2f3fcaf6e8acf589b2e938))
+
 ## [2.4.0](https://github.com/woodleighschool/woodbox/compare/2.3.1...2.4.0) (2026-08-25)
 
 
