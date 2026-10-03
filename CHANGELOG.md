@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.5.0](https://github.com/woodleighschool/woodbox/compare/2.4.0...v2.5.0) (2026-10-03)
+
+
+### Features
+
+* overhaul device workflows ([#8](https://github.com/woodleighschool/woodbox/issues/8)) ([0ac4803](https://github.com/woodleighschool/woodbox/commit/0ac48034336149e9d0a1c70bb3a8b63d9bf2c29e))
+* share CSV export across restock and sale ([33aad9f](https://github.com/woodleighschool/woodbox/commit/33aad9f673a3c23ad08c3ed2c9f36d965ac32727))
+
+
+### Bug Fixes
+
+* keep device queues reusable ([b3cf3b3](https://github.com/woodleighschool/woodbox/commit/b3cf3b3169266595fd686ff1a74213acce6e2a97))
+
 ## [2.4.0](https://github.com/woodleighschool/woodbox/compare/2.3.1...2.4.0) (2026-08-25)
 
 
