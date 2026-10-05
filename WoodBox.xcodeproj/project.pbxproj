@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 100;
+	objectVersion = 110;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -157,7 +157,7 @@
 			packageReferences = (
 				E10000032F50000000B46051 /* XCRemoteSwiftPackageReference "SimpleKeychain" */,
 			);
-			preferredProjectObjectVersion = 100;
+			preferredProjectObjectVersion = 110;
 			productRefGroup = 41D603C32F38277800B46051 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
