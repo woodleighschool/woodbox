@@ -69,26 +69,19 @@ struct DeviceSearchResultLabel: View {
         assetTag: item.assetTag,
         serial: item.serial
       ) {
-        if item.profile.requiresCondition {
-          conditionDetails
+        if let notes = item.conditionNotes.nilIfEmpty {
+          Text(notes)
             .font(.caption)
             .foregroundStyle(.secondary)
             .lineLimit(1)
         }
       }
       .padding(.vertical, 2)
+      .badge(grade)
     }
 
-    private var conditionDetails: some View {
-      HStack(spacing: 8) {
-        if let grade = item.grade {
-          Label("Grade \(grade.rawValue)", systemImage: "checkmark.seal")
-        }
-
-        if let notes = item.conditionNotes.nilIfEmpty {
-          Label(notes, systemImage: "note.text")
-        }
-      }
+    private var grade: Text? {
+      item.grade.map { Text($0.rawValue).accessibilityLabel("Grade \($0.rawValue)") }
     }
   }
 #endif
