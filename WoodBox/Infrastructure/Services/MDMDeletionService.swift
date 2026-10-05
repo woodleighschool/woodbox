@@ -53,14 +53,10 @@ enum MDMDeletionService {
           message: "The integration is not enabled or configured"
         )
       }
-      do {
-        if request.jamfDeviceType == .mobile {
-          try await jamfClient.deleteJamfMobileDevice(id: request.deviceId)
-        } else {
-          try await jamfClient.deleteJamfComputer(id: request.deviceId)
-        }
-      } catch let error as IntegrationError where error.statusCode == 404 {
-        return
+      if request.jamfDeviceType == .mobile {
+        try await jamfClient.deleteJamfMobileDevice(id: request.deviceId)
+      } else {
+        try await jamfClient.deleteJamfComputer(id: request.deviceId)
       }
 
     case .intune:
@@ -73,7 +69,7 @@ enum MDMDeletionService {
       }
       do {
         try await intuneClient.deleteIntuneDevice(id: request.deviceId)
-      } catch let error as IntegrationError where error.statusCode == 404 {
+      } catch let error as IntegrationError where error.integration == "Intune" && error.statusCode == 404 {
         return
       }
     }

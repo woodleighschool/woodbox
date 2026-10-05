@@ -1,16 +1,19 @@
 import Foundation
+import OSLog
 
 struct JamfClient {
   // MARK: - Properties
 
   private let baseURL: URL
   private let tokenProvider: OAuthTokenProvider
-  private let http = HTTPClient.shared
+  private let http: HTTPClient
+  private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "WoodBox", category: "Jamf")
 
   // MARK: - Init
 
-  init(baseURL: URL, clientId: String, clientSecret: String) {
+  init(baseURL: URL, clientId: String, clientSecret: String, http: HTTPClient = .shared) {
     self.baseURL = baseURL
+    self.http = http
 
     let tokenURL = baseURL.appending(path: "api/oauth/token")
 
@@ -22,7 +25,7 @@ struct JamfClient {
     ]
     let body = components.percentEncodedQuery ?? ""
 
-    tokenProvider = OAuthTokenProvider(tokenURL: tokenURL, requestBody: body)
+    tokenProvider = OAuthTokenProvider(tokenURL: tokenURL, requestBody: body, http: http)
   }
 
   // MARK: - Public Methods
@@ -69,17 +72,58 @@ struct JamfClient {
 
   func deleteJamfComputer(id: String) async throws {
     let url = baseURL.appending(path: "api/v3/computers-inventory/\(id)")
-    let request = try await authorizedRequest(url: url, method: "DELETE")
-    _ = try await http.data(for: request, action: "delete computer", integration: "Jamf")
+    try await deleteRecord(at: url, action: "delete computer")
   }
 
   func deleteJamfMobileDevice(id: String) async throws {
     let url = baseURL.appending(path: "JSSResource/mobiledevices/id/\(id)")
-    let request = try await authorizedRequest(url: url, method: "DELETE")
-    _ = try await http.data(for: request, action: "delete mobile device", integration: "Jamf")
+    try await deleteRecord(at: url, action: "delete mobile device")
   }
 
   // MARK: - Private Helpers
+
+  private func deleteRecord(at url: URL, action: String) async throws {
+    let request = try await authorizedRequest(url: url, method: "DELETE")
+    let started = ContinuousClock.now
+    do {
+      _ = try await http.data(for: request, action: action, integration: "Jamf")
+    } catch let error as IntegrationError where error.statusCode == 404 {
+      return
+    } catch {
+      let elapsed = started.duration(to: .now)
+      let code = (error as? IntegrationError)?.statusCode ?? (error as NSError).code
+      Self.logger.warning("\(action, privacy: .public) failed after \(String(describing: elapsed), privacy: .public), code \(code)")
+      guard Self.hasUncertainOutcome(error) else { throw error }
+
+      // A lost response doesn't imply a failed mutation. Read back; never repeat DELETE here.
+      for attempt in 0 ..< 3 {
+        try Task.checkCancellation()
+        if attempt > 0 {
+          try await Task.sleep(for: .seconds(1))
+        }
+        var verification = try await authorizedRequest(url: url)
+        verification.cachePolicy = .reloadIgnoringLocalCacheData
+        do {
+          _ = try await http.data(for: verification, action: "verify deletion", integration: "Jamf")
+        } catch let verificationError as IntegrationError where verificationError.statusCode == 404 {
+          Self.logger.notice("\(action, privacy: .public) confirmed absent after an uncertain response")
+          return
+        } catch {
+          try Task.checkCancellation()
+          break
+        }
+      }
+      throw error
+    }
+  }
+
+  private static func hasUncertainOutcome(_ error: any Error) -> Bool {
+    if let error = error as? IntegrationError, let status = error.statusCode {
+      return status == 408 || (500 ... 599).contains(status)
+    }
+    guard let error = error as? URLError else { return false }
+    return [.timedOut, .networkConnectionLost, .badServerResponse].contains(error.code)
+  }
 
   private func fetchJamfComputersPage(page: Int, pageSize: Int) async throws
     -> JamfComputersResponse
@@ -131,6 +175,7 @@ struct JamfClient {
   private func authorizedRequest(url: URL, method: String = "GET") async throws -> URLRequest {
     var request = URLRequest(url: url)
     request.httpMethod = method
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
 
     let token = try await tokenProvider.token()
     request.setBearerToken(token)

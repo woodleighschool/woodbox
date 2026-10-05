@@ -1,18 +1,26 @@
 import Foundation
 
-struct HTTPClient {
-  static let shared = HTTPClient()
+struct HTTPClient: Sendable {
+  nonisolated static let shared = HTTPClient()
 
-  private let session = URLSession.shared
+  private let transport: @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
+  nonisolated init(
+    transport: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = {
+      try await URLSession.shared.data(for: $0)
+    }
+  ) {
+    self.transport = transport
+  }
 
   // MARK: - Core Methods
 
-  func data(
+  nonisolated func data(
     for request: URLRequest,
     action: String = "perform request",
     integration: String = "HTTP"
   ) async throws -> Data {
-    let (data, response) = try await session.data(for: request)
+    let (data, response) = try await transport(request)
 
     guard let http = response as? HTTPURLResponse else {
       throw URLError(.badServerResponse)

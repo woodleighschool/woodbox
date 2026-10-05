@@ -5,6 +5,7 @@ actor OAuthTokenProvider {
 
   private let tokenURL: URL
   private let requestBody: String
+  private let http: HTTPClient
 
   private var accessToken: String?
   private var expiryTime: Date?
@@ -12,9 +13,10 @@ actor OAuthTokenProvider {
 
   // MARK: - Init
 
-  init(tokenURL: URL, requestBody: String) {
+  init(tokenURL: URL, requestBody: String, http: HTTPClient = .shared) {
     self.tokenURL = tokenURL
     self.requestBody = requestBody
+    self.http = http
   }
 
   // MARK: - Public API
@@ -52,13 +54,7 @@ actor OAuthTokenProvider {
     request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
     request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-    let (data, response) = try await URLSession.shared.data(for: request)
-
-    guard let httpResponse = response as? HTTPURLResponse,
-          (200 ... 299).contains(httpResponse.statusCode)
-    else {
-      throw URLError(.badServerResponse)
-    }
+    let data = try await http.data(for: request, action: "request access token", integration: "OAuth")
 
     let tokenResponse = try JSONDecoder().decode(OAuthResponse.self, from: data)
 

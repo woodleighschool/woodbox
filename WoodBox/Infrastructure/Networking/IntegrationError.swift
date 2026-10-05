@@ -1,6 +1,6 @@
 import Foundation
 
-struct IntegrationError: LocalizedError {
+nonisolated struct IntegrationError: LocalizedError {
   // MARK: - Properties
 
   let action: String
