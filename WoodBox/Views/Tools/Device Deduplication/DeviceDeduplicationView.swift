@@ -132,35 +132,7 @@ struct DuplicateRecordRow: View {
 
   var body: some View {
     HStack(spacing: 16) {
-      VStack(alignment: .leading, spacing: 4) {
-        HStack(spacing: 6) {
-          DeviceNameText(name: record.deviceName)
-            .font(.body.weight(.medium))
-            .lineLimit(1)
-
-          Text("\(record.deviceId)")
-            .font(.caption.monospaced())
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-
-          if isLatest {
-            PingBadge()
-              .accessibilityLabel("Latest record")
-          }
-        }
-
-        HStack(spacing: 8) {
-          Label(record.provider.rawValue, systemImage: "server.rack")
-
-          if let date = record.lastCheckIn {
-            Text(
-              "Last seen \(date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)))"
-            )
-          }
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-      }
+      details
 
       Spacer(minLength: 8)
 
@@ -189,6 +161,44 @@ struct DuplicateRecordRow: View {
       }
     }
     #endif
+  }
+
+  private var details: some View {
+    HStack(alignment: .firstTextBaseline, spacing: 10) {
+      // The gutter stays reserved so every record's text lines up.
+      ZStack {
+        if isLatest {
+          PingBadge()
+            .accessibilityLabel("Latest record")
+        }
+      }
+      .frame(width: 10)
+
+      VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+          DeviceNameText(name: record.deviceName)
+            .font(.body.weight(.medium))
+            .layoutPriority(1)
+
+          Group {
+            Text(record.provider.rawValue)
+            Text(record.deviceId)
+              .monospaced()
+          }
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        }
+        .lineLimit(1)
+
+        if let date = record.lastCheckIn {
+          Text(
+            "Last seen \(date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)))"
+          )
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        }
+      }
+    }
   }
 
   private var mdmURL: URL? {
