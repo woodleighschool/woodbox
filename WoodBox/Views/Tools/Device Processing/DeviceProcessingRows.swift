@@ -5,18 +5,21 @@ struct DeviceSearchResultLabel: View {
   let device: Device
 
   var body: some View {
-    Label {
+    HStack(spacing: 10) {
+      Image(systemName: device.symbolName)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 24, height: 24)
+
       VStack(alignment: .leading, spacing: 3) {
         DeviceNameText(name: device.name)
-        Text(device.model)
-          .font(.caption)
-          .foregroundStyle(.secondary)
-        DeviceIdentifiersRow(assetTag: device.assetTag, serial: device.serial)
-          .font(.caption)
-          .foregroundStyle(.secondary)
+        Group {
+          Text(device.model)
+          DeviceIdentifiersRow(assetTag: device.assetTag, serial: device.serial)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
       }
-    } icon: {
-      Image(systemName: device.symbolName)
     }
   }
 }
