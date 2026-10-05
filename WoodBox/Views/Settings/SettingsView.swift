@@ -145,8 +145,11 @@ struct SnipeItSettingsView: View {
             }
           }
 
-        SettingsTextField("Base URL", text: $settings.snipeItBaseURL, kind: .url)
-        SettingsSecureField("API Key", text: $settings.snipeItAPIKey)
+        TextField("Base URL", text: $settings.snipeItBaseURL)
+        #if os(iOS)
+          .keyboardType(.URL)
+        #endif
+        SecureField("API Key", text: $settings.snipeItAPIKey)
 
         ConnectionTestRow(disabled: settings.snipeItBaseURL.isEmpty) {
           try await testConnection()
@@ -154,21 +157,9 @@ struct SnipeItSettingsView: View {
       }
 
       Section("Configuration") {
-        SettingsTextField(
-          "Spare Device Name Regex",
-          text: $settings.snipeItSpareDeviceNameRegex,
-          kind: .identifier
-        )
-        SettingsTextField(
-          "Condition Custom Field",
-          text: $settings.snipeItConditionField,
-          kind: .identifier
-        )
-        SettingsTextField(
-          "Condition Notes Custom Field",
-          text: $settings.snipeItConditionNotesField,
-          kind: .identifier
-        )
+        TextField("Spare Device Name Regex", text: $settings.snipeItSpareDeviceNameRegex)
+        TextField("Condition Custom Field", text: $settings.snipeItConditionField)
+        TextField("Condition Notes Custom Field", text: $settings.snipeItConditionNotesField)
       }
 
       Section("Snipe-IT Statuses") {
@@ -193,6 +184,7 @@ struct SnipeItSettingsView: View {
       }
     }
     .formStyle(.grouped)
+    .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
   }
 
@@ -228,9 +220,12 @@ struct JamfSettingsView: View {
             }
           }
 
-        SettingsTextField("Base URL", text: $settings.jamfBaseURL, kind: .url)
-        SettingsTextField("Client ID", text: $settings.jamfClientId, kind: .identifier)
-        SettingsSecureField("Client Secret", text: $settings.jamfClientSecret)
+        TextField("Base URL", text: $settings.jamfBaseURL)
+        #if os(iOS)
+          .keyboardType(.URL)
+        #endif
+        TextField("Client ID", text: $settings.jamfClientId)
+        SecureField("Client Secret", text: $settings.jamfClientSecret)
 
         ConnectionTestRow(disabled: settings.jamfBaseURL.isEmpty) {
           try await testConnection()
@@ -244,6 +239,7 @@ struct JamfSettingsView: View {
       }
     }
     .formStyle(.grouped)
+    .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
   }
 
@@ -283,9 +279,9 @@ struct IntuneSettingsView: View {
             }
           }
 
-        SettingsTextField("Tenant ID", text: $settings.intuneTenantId, kind: .identifier)
-        SettingsTextField("Client ID", text: $settings.intuneClientId, kind: .identifier)
-        SettingsSecureField("Client Secret", text: $settings.intuneClientSecret)
+        TextField("Tenant ID", text: $settings.intuneTenantId)
+        TextField("Client ID", text: $settings.intuneClientId)
+        SecureField("Client Secret", text: $settings.intuneClientSecret)
 
         ConnectionTestRow {
           try await testConnection()
@@ -299,6 +295,7 @@ struct IntuneSettingsView: View {
       }
     }
     .formStyle(.grouped)
+    .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
   }
 
@@ -325,8 +322,11 @@ struct FreshserviceSettingsView: View {
     Form {
       Section("Credentials") {
         Toggle("Enabled", isOn: $settings.freshserviceIsEnabled)
-        SettingsTextField("Base URL", text: $settings.freshserviceBaseURL, kind: .url)
-        SettingsSecureField("API Key", text: $settings.freshserviceAPIKey)
+        TextField("Base URL", text: $settings.freshserviceBaseURL)
+        #if os(iOS)
+          .keyboardType(.URL)
+        #endif
+        SecureField("API Key", text: $settings.freshserviceAPIKey)
 
         ConnectionTestRow(disabled: settings.freshserviceBaseURL.isEmpty) {
           try await testConnection()
@@ -334,20 +334,20 @@ struct FreshserviceSettingsView: View {
       }
 
       Section("Configuration") {
-        SettingsIntegerField("Workspace ID", value: $settings.freshserviceWorkspaceId)
-        SettingsTextField(
-          "Spare Custom Field",
-          text: $settings.freshserviceSpareField,
-          kind: .identifier
+        TextField(
+          "Workspace ID",
+          value: $settings.freshserviceWorkspaceId,
+          format: .number.grouping(.never)
         )
-        SettingsTextField(
-          "Compnow Ticket Custom Field",
-          text: $settings.freshserviceCompnowField,
-          kind: .identifier
-        )
+        #if os(iOS)
+        .keyboardType(.numberPad)
+        #endif
+        TextField("Spare Custom Field", text: $settings.freshserviceSpareField)
+        TextField("Compnow Ticket Custom Field", text: $settings.freshserviceCompnowField)
       }
     }
     .formStyle(.grouped)
+    .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
   }
 
@@ -373,22 +373,33 @@ struct CompnowSettingsView: View {
     Form {
       Section("Credentials") {
         Toggle("Enabled", isOn: $settings.compnowIsEnabled)
-        SettingsTextField("Username", text: $settings.compnowUsername, kind: .identifier)
-        SettingsSecureField("Password", text: $settings.compnowPassword)
-        SettingsSecureField("API Key", text: $settings.compnowAPIKey)
+        TextField("Username", text: $settings.compnowUsername)
+        SecureField("Password", text: $settings.compnowPassword)
+        SecureField("API Key", text: $settings.compnowAPIKey)
 
         ConnectionTestRow {
           try await testConnection()
         }
       }
+      .verbatimEntry()
 
       Section("End User Details") {
-        SettingsTextField("Address", text: $settings.compnowAddress)
-        SettingsTextField("Suburb", text: $settings.compnowSuburb)
-        SettingsTextField("State", text: $settings.compnowState)
-        SettingsTextField("Postcode", text: $settings.compnowPostcode, kind: .number)
-        SettingsTextField("Email", text: $settings.compnowEmail, kind: .email)
-        SettingsTextField("Phone", text: $settings.compnowPhone, kind: .telephone)
+        TextField("Address", text: $settings.compnowAddress)
+        TextField("Suburb", text: $settings.compnowSuburb)
+        TextField("State", text: $settings.compnowState)
+        TextField("Postcode", text: $settings.compnowPostcode)
+        #if os(iOS)
+          .keyboardType(.numberPad)
+        #endif
+        TextField("Email", text: $settings.compnowEmail)
+          .verbatimEntry()
+        #if os(iOS)
+          .keyboardType(.emailAddress)
+        #endif
+        TextField("Phone", text: $settings.compnowPhone)
+        #if os(iOS)
+          .keyboardType(.phonePad)
+        #endif
       }
     }
     .formStyle(.grouped)
@@ -472,122 +483,14 @@ private struct ConnectionTestRow: View {
   }
 }
 
-// MARK: - Settings Fields
+// MARK: - Text Entry
 
-private enum SettingsFieldKind {
-  case plain
-  case url
-  case identifier
-  case email
-  case telephone
-  case number
-}
-
-private struct SettingsTextField: View {
-  let title: String
-  @Binding var text: String
-  let kind: SettingsFieldKind
-
-  init(
-    _ title: String,
-    text: Binding<String>,
-    kind: SettingsFieldKind = .plain
-  ) {
-    self.title = title
-    _text = text
-    self.kind = kind
-  }
-
-  var body: some View {
-    LabeledContent(title) {
-      configuredField
-    }
-  }
-
-  @ViewBuilder
-  private var configuredField: some View {
-    let field = TextField(title, text: $text)
-      .labelsHidden()
-
-    switch kind {
-    case .plain:
-      field
-    case .url:
-      field
-        .textContentType(.URL)
-        .autocorrectionDisabled()
-      #if os(iOS)
-        .keyboardType(.URL)
-        .textInputAutocapitalization(.never)
-      #endif
-    case .identifier:
-      field
-        .autocorrectionDisabled()
-      #if os(iOS)
-        .textInputAutocapitalization(.never)
-      #endif
-    case .email:
-      field
-        .textContentType(.emailAddress)
-        .autocorrectionDisabled()
-      #if os(iOS)
-        .keyboardType(.emailAddress)
-        .textInputAutocapitalization(.never)
-      #endif
-    case .telephone:
-      field
-        .textContentType(.telephoneNumber)
-      #if os(iOS)
-        .keyboardType(.phonePad)
-      #endif
-    case .number:
-      field
-        .autocorrectionDisabled()
-      #if os(iOS)
-        .keyboardType(.numberPad)
-      #endif
-    }
-  }
-}
-
-private struct SettingsSecureField: View {
-  let title: String
-  @Binding var text: String
-
-  init(_ title: String, text: Binding<String>) {
-    self.title = title
-    _text = text
-  }
-
-  var body: some View {
-    LabeledContent(title) {
-      SecureField(title, text: $text)
-        .labelsHidden()
-        .autocorrectionDisabled()
-      #if os(iOS)
-        .textInputAutocapitalization(.never)
-      #endif
-    }
-    .privacySensitive()
-  }
-}
-
-private struct SettingsIntegerField: View {
-  let title: String
-  @Binding var value: Int
-
-  init(_ title: String, value: Binding<Int>) {
-    self.title = title
-    _value = value
-  }
-
-  var body: some View {
-    LabeledContent(title) {
-      TextField(title, value: $value, format: .number)
-        .labelsHidden()
-      #if os(iOS)
-        .keyboardType(.numberPad)
-      #endif
-    }
+private extension View {
+  /// URLs, identifiers, and secrets are entered exactly as typed.
+  func verbatimEntry() -> some View {
+    autocorrectionDisabled()
+    #if os(iOS)
+      .textInputAutocapitalization(.never)
+    #endif
   }
 }

@@ -121,7 +121,7 @@ final class AppSettings {
     }
   }
 
-  var freshserviceWorkspaceId: Int {
+  var freshserviceWorkspaceId: Int? {
     didSet {
       UserDefaults.standard.set(freshserviceWorkspaceId, forKey: "freshserviceWorkspaceId")
     }
@@ -236,7 +236,7 @@ final class AppSettings {
     freshserviceIsEnabled = UserDefaults.standard.bool(forKey: "freshserviceIsEnabled")
     freshserviceBaseURL = UserDefaults.standard.string(forKey: "freshserviceBaseURL") ?? ""
     freshserviceAPIKey = keychain.read(key: "freshserviceAPIKey") ?? ""
-    freshserviceWorkspaceId = UserDefaults.standard.integer(forKey: "freshserviceWorkspaceId")
+    freshserviceWorkspaceId = UserDefaults.standard.object(forKey: "freshserviceWorkspaceId") as? Int
     freshserviceSpareField = UserDefaults.standard.string(forKey: "freshserviceSpareField") ?? ""
     freshserviceCompnowField =
       UserDefaults.standard.string(forKey: "freshserviceCompnowField") ?? ""
