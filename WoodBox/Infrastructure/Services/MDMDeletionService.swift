@@ -81,10 +81,11 @@ enum MDMDeletionService {
 
   @MainActor
   static func removeLocally(
-    _ record: MDMRecord,
+    _ request: Request,
     from device: Device,
     modelContext: ModelContext
   ) throws {
+    guard let record = device.mdmRecords.first(where: { Request(record: $0) == request }) else { return }
     device.mdmRecords.removeAll { $0.id == record.id }
     modelContext.delete(record)
     try modelContext.save()
@@ -97,6 +98,12 @@ enum MDMDeletionService {
     to device: Device,
     modelContext: ModelContext
   ) throws -> MDMRecord {
+    if let existing = device.mdmRecords.first(where: {
+      $0.provider == record.provider && $0.deviceId == record.deviceId
+        && $0.jamfDeviceType == record.jamfDeviceType
+    }) {
+      return existing
+    }
     let restored = MDMRecord(
       provider: record.provider,
       deviceId: record.deviceId,

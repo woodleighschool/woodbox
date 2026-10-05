@@ -36,7 +36,7 @@ struct MDMDeletionServiceTests {
     let request = MDMDeletionService.Request(record: jamfRecord)
     let localRecord = MDMDeletionService.LocalRecord(record: jamfRecord)
     try MDMDeletionService.removeLocally(
-      jamfRecord,
+      request,
       from: device,
       modelContext: context
     )
@@ -57,5 +57,13 @@ struct MDMDeletionServiceTests {
     #expect(restored.provider == .jamf)
     #expect(restored.deviceId == "101")
     #expect(Set(device.mdmRecords.map(\.id)) == Set([intuneRecord.id, restored.id]))
+    let repeatedRestore = try MDMDeletionService.restoreLocally(localRecord, to: device, modelContext: context)
+    #expect(repeatedRestore === restored)
+    #expect(device.mdmRecords.count == 2)
+
+    // Refresh may replace the model object while the original remote request is in flight.
+    try MDMDeletionService.removeLocally(request, from: device, modelContext: context)
+    try MDMDeletionService.removeLocally(request, from: device, modelContext: context)
+    #expect(device.mdmRecords.map(\.id) == [intuneRecord.id])
   }
 }

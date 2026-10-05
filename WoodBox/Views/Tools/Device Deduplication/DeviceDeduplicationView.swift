@@ -55,7 +55,7 @@ struct DeviceDeduplicationView: View {
     let localRecord = MDMDeletionService.LocalRecord(record: record)
 
     do {
-      try MDMDeletionService.removeLocally(record, from: device, modelContext: modelContext)
+      try MDMDeletionService.removeLocally(request, from: device, modelContext: modelContext)
     } catch {
       alertItem = .error(error)
       return
@@ -77,6 +77,14 @@ struct DeviceDeduplicationView: View {
           message: "\(error.localizedDescription) The local record could not be restored: \(restoreError.localizedDescription)"
         )
       }
+      return
+    }
+
+    do {
+      // A concurrent refresh may have reintroduced the record during the remote delete.
+      try MDMDeletionService.removeLocally(request, from: device, modelContext: modelContext)
+    } catch {
+      alertItem = .error(error)
     }
   }
 }

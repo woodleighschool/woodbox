@@ -94,13 +94,13 @@ struct DeviceProcessingCoordinator {
     }
 
     do {
-      for record in device.mdmRecords.sorted(by: {
+      let requests = device.mdmRecords.sorted(by: {
         $0.provider.processingOrder < $1.provider.processingOrder
-      }) {
+      }).map(MDMDeletionService.Request.init)
+      for request in requests {
         try Task.checkCancellation()
-        progress("Deleting from \(record.provider.rawValue)")
+        progress("Deleting from \(request.provider.rawValue)")
 
-        let request = MDMDeletionService.Request(record: record)
         do {
           try await service.deleteMDMRecord(request)
         } catch {
@@ -108,7 +108,7 @@ struct DeviceProcessingCoordinator {
         }
 
         try MDMDeletionService.removeLocally(
-          record,
+          request,
           from: device,
           modelContext: modelContext
         )
