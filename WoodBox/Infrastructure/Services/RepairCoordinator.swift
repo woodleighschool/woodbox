@@ -127,45 +127,34 @@ struct LiveRepairService: RepairServicing {
 struct RepairCoordinator {
   let service: any RepairServicing
 
-  func submit(_ input: RepairSubmissionInput, state: RepairSubmissionState) async {
-    guard !state.isRunning, !state.isComplete else { return }
+  /// Runs the selected steps in order, recording each completed step in `progress`.
+  func submit(_ input: RepairSubmissionInput, progress: RepairProgress) async throws {
+    try validate(input)
 
-    do {
-      try validate(input)
+    if input.createCompnowTicket, progress.compnowTicketId == nil {
+      progress.compnowTicketId = try await service.createCompnowTicket(for: input)
+    }
 
-      if input.createCompnowTicket, state.compnowTicketId == nil {
-        state.begin("Creating Compnow ticket")
-        state.compnowTicketId = try await service.createCompnowTicket(for: input)
-      }
+    if input.createFreshserviceTicket, progress.freshserviceTicketId == nil {
+      try Task.checkCancellation()
+      progress.freshserviceTicketId = try await service.createFreshserviceTicket(
+        for: input,
+        compnowTicketId: progress.compnowTicketId
+      )
+    }
 
-      if input.createFreshserviceTicket, state.freshserviceTicketId == nil {
+    if let spare = input.spare, !progress.spareCheckedOut {
+      let userId = try requireSnipeItUserId(input.snipeItUserId)
+
+      if spare.isAssigned, !progress.spareCheckedIn {
         try Task.checkCancellation()
-        state.begin("Creating Freshservice ticket")
-        state.freshserviceTicketId = try await service.createFreshserviceTicket(
-          for: input,
-          compnowTicketId: state.compnowTicketId
-        )
+        try await service.checkInSpare(spare)
+        progress.spareCheckedIn = true
       }
 
-      if let spare = input.spare, !state.spareCheckedOut {
-        let userId = try requireSnipeItUserId(input.snipeItUserId)
-
-        if spare.isAssigned, !state.spareCheckedIn {
-          try Task.checkCancellation()
-          state.begin("Checking in spare")
-          try await service.checkInSpare(spare)
-          state.spareCheckedIn = true
-        }
-
-        try Task.checkCancellation()
-        state.begin("Checking out spare")
-        try await service.checkoutSpare(spare, to: userId)
-        state.spareCheckedOut = true
-      }
-
-      state.complete()
-    } catch {
-      state.fail(error)
+      try Task.checkCancellation()
+      try await service.checkoutSpare(spare, to: userId)
+      progress.spareCheckedOut = true
     }
   }
 

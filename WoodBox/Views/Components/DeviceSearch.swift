@@ -4,8 +4,8 @@ import SwiftUI
 // MARK: - Public API
 
 extension View {
-  func deviceSearch(selection: DeviceSelectionState, isEnabled: Bool = true) -> some View {
-    modifier(DeviceSearch(selection: selection, isEnabled: isEnabled))
+  func deviceSearch(selection: DeviceSelectionState) -> some View {
+    modifier(DeviceSearch(selection: selection))
   }
 }
 
@@ -13,14 +13,9 @@ extension View {
 
 private struct DeviceSearch: ViewModifier {
   @Bindable var selection: DeviceSelectionState
-  let isEnabled: Bool
 
   func body(content: Content) -> some View {
-    if isEnabled {
-      DeviceSearchBody(content: content, selection: selection)
-    } else {
-      content
-    }
+    DeviceSearchBody(content: content, selection: selection)
   }
 }
 

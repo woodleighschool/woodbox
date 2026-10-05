@@ -19,7 +19,9 @@ struct RepairIntakeView: View {
   }
 
   @State private var form = FormState()
-  @State private var submission = RepairSubmissionState()
+  @State private var progress = RepairProgress()
+  @State private var isSubmitting = false
+  @State private var alertItem: AlertItem?
 
   private var settings: AppSettings {
     modelData.settings
@@ -40,71 +42,54 @@ struct RepairIntakeView: View {
       || (settings.snipeItIsEnabled && form.checkoutSpare && form.selectedSpare != nil)
   }
 
-  private var validationMessage: String? {
-    guard deviceSelection.selectedDevice != nil else { return "Select a device to repair." }
-    guard form.problem.nilIfEmpty != nil else { return "Describe the problem." }
-    guard hasSelectedOutcome else {
-      return "Select at least one repair outcome."
-    }
-    if settings.freshserviceIsEnabled,
-       form.createFreshserviceTicket,
-       form.endUserEmail.nilIfEmpty == nil
-    {
-      return "Enter the end-user email for Freshservice."
-    }
-    if form.checkoutSpare, let spare = form.selectedSpare {
-      guard spare.snipeItId != nil, spare.statusId != nil else {
-        return "The selected spare is missing Snipe-IT data."
-      }
-      guard matchingSnipeItUser != nil else {
-        return "No Snipe-IT user matches the end-user email."
-      }
-    }
-    return nil
+  private var isSubmitDisabled: Bool {
+    isSubmitting
+      || deviceSelection.selectedDevice == nil
+      || form.problem.nilIfEmpty == nil
+      || !hasSelectedOutcome
   }
 
   var body: some View {
     Form {
       deviceSection
-        .disabled(submission.hasStarted)
       detailsSection
-        .disabled(submission.hasStarted)
       endUserSection
-        .disabled(submission.hasStarted)
       outcomesSection
-      if submission.hasStarted {
-        progressSection
-      }
     }
     .formStyle(.grouped)
+    .disabled(isSubmitting)
     #if os(iOS)
       .refreshable {
         await modelData.cacheManager.sync()
       }
     #endif
-      .deviceSearch(selection: deviceSelection, isEnabled: !submission.hasStarted)
+      .deviceSearch(selection: deviceSelection)
       .scrollDismissesKeyboard(.interactively)
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           submitButton
         }
       }
+      .alert(item: $alertItem) { item in
+        Alert(
+          title: Text(item.title),
+          message: Text(item.message),
+          dismissButton: .default(Text("OK"))
+        )
+      }
       .onChange(of: deviceSelection.selectedDevice?.serial, initial: true) { _, _ in
-        guard !submission.hasStarted else { return }
+        // Completed steps belong to the device they were submitted for.
+        progress = RepairProgress()
         syncFormWithSelection()
       }
   }
 
   private var deviceSection: some View {
     Section("Device") {
-      if submission.hasStarted {
-        DeviceSummaryItem(device: deviceSelection.selectedDevice)
-      } else {
-        DeviceSummaryItem(
-          device: deviceSelection.selectedDevice,
-          onClear: deviceSelection.clear
-        )
-      }
+      DeviceSummaryItem(
+        device: deviceSelection.selectedDevice,
+        onClear: deviceSelection.clear
+      )
     }
   }
 
@@ -159,120 +144,85 @@ struct RepairIntakeView: View {
 
   private var outcomesSection: some View {
     Section {
-      if submission.hasStarted {
-        if settings.compnowIsEnabled, form.createCompnowTicket {
-          RepairOutcomeRow(
-            title: "Compnow repair ticket",
-            systemImage: "wrench.and.screwdriver",
-            value: submission.compnowTicketId
-          )
-        }
+      if settings.compnowIsEnabled {
+        Toggle("Create Compnow Ticket", systemImage: "wrench.and.screwdriver", isOn: $form.createCompnowTicket)
+      }
 
-        if settings.freshserviceIsEnabled, form.createFreshserviceTicket {
-          RepairOutcomeRow(
-            title: "Freshservice ticket",
-            systemImage: "ticket",
-            value: submission.freshserviceTicketId
-          )
-        }
+      if settings.freshserviceIsEnabled {
+        Toggle("Create Freshservice Ticket", systemImage: "ticket", isOn: $form.createFreshserviceTicket)
+      }
 
-        if settings.snipeItIsEnabled, form.checkoutSpare, let spare = form.selectedSpare {
-          RepairOutcomeRow(
-            title: "Check out \(spare.name ?? spare.serial)",
-            systemImage: "shippingbox",
-            pendingValue: "Will check out",
-            isComplete: submission.spareCheckedOut
-          )
-        }
-      } else {
-        if settings.compnowIsEnabled {
-          Toggle("Create Compnow Ticket", systemImage: "wrench.and.screwdriver", isOn: $form.createCompnowTicket)
-        }
+      if settings.snipeItIsEnabled {
+        Toggle("Check Out Spare to End User", systemImage: "shippingbox", isOn: $form.checkoutSpare)
+          .disabled(form.selectedSpare == nil)
+      }
 
-        if settings.freshserviceIsEnabled {
-          Toggle("Create Freshservice Ticket", systemImage: "ticket", isOn: $form.createFreshserviceTicket)
-        }
-
-        if settings.snipeItIsEnabled {
-          Toggle("Check Out Spare to End User", systemImage: "shippingbox", isOn: $form.checkoutSpare)
-            .disabled(form.selectedSpare == nil)
-        }
-
-        if !settings.compnowIsEnabled,
-           !settings.freshserviceIsEnabled,
-           !settings.snipeItIsEnabled
-        {
-          Text("Enable a repair integration in Settings.")
-            .foregroundStyle(.secondary)
-        }
+      if !settings.compnowIsEnabled,
+         !settings.freshserviceIsEnabled,
+         !settings.snipeItIsEnabled
+      {
+        Text("Enable a repair integration in Settings.")
+          .foregroundStyle(.secondary)
       }
     } header: {
       Label("Outcomes", systemImage: "checklist")
-    } footer: {
-      if !submission.hasStarted, let validationMessage {
-        Text(validationMessage)
-      }
-    }
-  }
-
-  private var progressSection: some View {
-    Section("Progress") {
-      if submission.isRunning, let message = submission.operationMessage {
-        HStack {
-          ProgressView()
-            .controlSize(.small)
-          Text(message)
-        }
-      } else if submission.isComplete {
-        Label("Repair submitted", systemImage: "checkmark.circle.fill")
-          .foregroundStyle(.green)
-      } else if let error = submission.errorMessage {
-        Label(error, systemImage: "exclamationmark.triangle.fill")
-          .foregroundStyle(.red)
-      }
     }
   }
 
   private var submitButton: some View {
     Button {
-      if submission.isComplete {
-        resetForm()
-      } else {
-        Task { await submit() }
-      }
+      Task { await submit() }
     } label: {
-      if submission.isRunning {
+      if isSubmitting {
         ProgressView()
           .controlSize(.small)
       } else {
-        Label(
-          submission.isComplete
-            ? "New Repair"
-            : (submission.hasStarted ? "Retry Repair" : "Submit Repair"),
-          systemImage: submission.isComplete ? "plus" : "paperplane"
-        )
+        Label("Submit Repair", systemImage: "paperplane")
       }
     }
-    .disabled(
-      submission.isRunning
-        || (!submission.hasStarted && validationMessage != nil)
-    )
+    .disabled(isSubmitDisabled)
     .buttonStyle(.borderedProminent)
   }
 
   private func submit() async {
-    guard let input = makeSubmissionInput() else { return }
-    let coordinator = RepairCoordinator(service: LiveRepairService(settings: settings))
-    await coordinator.submit(input, state: submission)
+    guard let device = deviceSelection.selectedDevice else { return }
+    let progress = progress
+    var spare: RepairSpareSnapshot?
+    isSubmitting = true
+    defer { isSubmitting = false }
+
+    do {
+      let input = try makeSubmissionInput(for: device)
+      spare = input.spare
+      let coordinator = RepairCoordinator(service: LiveRepairService(settings: settings))
+      try await coordinator.submit(input, progress: progress)
+
+      resetForm()
+      alertItem = AlertItem(
+        title: "Repair Submitted",
+        message: completedSteps(of: progress, spare: spare).joined(separator: "\n")
+      )
+    } catch {
+      let completed = completedSteps(of: progress, spare: spare)
+      let resume = completed.isEmpty
+        ? ""
+        : "\n\nAlready done: \(completed.joined(separator: ", ")). Submit again to finish."
+      alertItem = AlertItem(
+        title: "Unable to Submit Repair",
+        message: error.localizedDescription + resume
+      )
+    }
   }
 
-  private func makeSubmissionInput() -> RepairSubmissionInput? {
-    guard let device = deviceSelection.selectedDevice else { return nil }
-
-    let spare: RepairSpareSnapshot?
-    if form.checkoutSpare, let selectedSpare = form.selectedSpare {
+  private func makeSubmissionInput(for device: Device) throws -> RepairSubmissionInput {
+    var spare: RepairSpareSnapshot?
+    if settings.snipeItIsEnabled, form.checkoutSpare, let selectedSpare = form.selectedSpare {
       guard let assetId = selectedSpare.snipeItId, let statusId = selectedSpare.statusId else {
-        return nil
+        throw IntegrationError(
+          action: "check out spare",
+          integration: "Snipe-IT",
+          message: "The selected spare has no asset or status ID"
+        )
       }
       spare = RepairSpareSnapshot(
         assetId: assetId,
@@ -281,8 +231,6 @@ struct RepairIntakeView: View {
         isAssigned: selectedSpare.assignedUserName != nil
           || selectedSpare.assignedUserEmail != nil
       )
-    } else {
-      spare = nil
     }
 
     return RepairSubmissionInput(
@@ -298,10 +246,23 @@ struct RepairIntakeView: View {
     )
   }
 
+  private func completedSteps(of progress: RepairProgress, spare: RepairSpareSnapshot?) -> [String] {
+    var steps: [String] = []
+    if let ticketId = progress.compnowTicketId {
+      steps.append("Compnow ticket \(ticketId)")
+    }
+    if let ticketId = progress.freshserviceTicketId {
+      steps.append("Freshservice ticket \(ticketId)")
+    }
+    if progress.spareCheckedOut {
+      steps.append("\(spare?.name ?? "Spare") checked out")
+    }
+    return steps
+  }
+
   private func resetForm() {
     deviceSelection.clear()
     form = FormState()
-    submission.reset()
   }
 
   private func syncFormWithSelection() {
@@ -316,32 +277,6 @@ struct RepairIntakeView: View {
     form.endUserEmail = device.assignedUserEmail ?? ""
     form.createFreshserviceTicket = settings.freshserviceIsEnabled
       && form.endUserEmail.nilIfEmpty != nil
-  }
-}
-
-private struct RepairOutcomeRow: View {
-  let title: String
-  let systemImage: String
-  var value: String?
-  var pendingValue = "Will create"
-  var isComplete = false
-
-  var body: some View {
-    LabeledContent {
-      if let value {
-        Text(value)
-          .foregroundStyle(.secondary)
-          .textSelection(.enabled)
-      } else if isComplete {
-        Image(systemName: "checkmark.circle.fill")
-          .foregroundStyle(.green)
-      } else {
-        Text(pendingValue)
-          .foregroundStyle(.secondary)
-      }
-    } label: {
-      Label(title, systemImage: systemImage)
-    }
   }
 }
 

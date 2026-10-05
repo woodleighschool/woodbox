@@ -5,12 +5,12 @@ import Testing
 @MainActor
 struct RepairCoordinatorTests {
   @Test("repair creates both tickets then assigns the spare")
-  func submitsRepairInOrder() async {
+  func submitsRepairInOrder() async throws {
     let service = TestRepairService()
-    let state = RepairSubmissionState()
+    let progress = RepairProgress()
     let coordinator = RepairCoordinator(service: service)
 
-    await coordinator.submit(makeInput(), state: state)
+    try await coordinator.submit(makeInput(), progress: progress)
 
     #expect(service.events == [
       .compnow,
@@ -18,66 +18,68 @@ struct RepairCoordinatorTests {
       .checkIn(assetId: 7),
       .checkout(assetId: 7, userId: 19),
     ])
-    #expect(state.compnowTicketId == "CN-42")
-    #expect(state.freshserviceTicketId == "FS-84")
-    #expect(state.spareCheckedIn)
-    #expect(state.spareCheckedOut)
-    #expect(state.isComplete)
+    #expect(progress.compnowTicketId == "CN-42")
+    #expect(progress.freshserviceTicketId == "FS-84")
+    #expect(progress.spareCheckedIn)
+    #expect(progress.spareCheckedOut)
   }
 
-  @Test("retry resumes after the last confirmed step")
-  func retrySkipsCompletedWork() async {
+  @Test("submitting again resumes after the last completed step")
+  func retrySkipsCompletedWork() async throws {
     let service = TestRepairService()
     service.failFreshservice = true
-    let state = RepairSubmissionState()
+    let progress = RepairProgress()
     let coordinator = RepairCoordinator(service: service)
 
-    await coordinator.submit(makeInput(), state: state)
+    await #expect(throws: TestRepairError.self) {
+      try await coordinator.submit(makeInput(), progress: progress)
+    }
 
     #expect(service.events == [.compnow, .freshservice(compnowTicketId: "CN-42")])
-    #expect(state.compnowTicketId == "CN-42")
-    #expect(state.freshserviceTicketId == nil)
-    #expect(!state.isComplete)
+    #expect(progress.compnowTicketId == "CN-42")
+    #expect(progress.freshserviceTicketId == nil)
+    #expect(!progress.spareCheckedOut)
 
     service.failFreshservice = false
     service.events.removeAll()
-    await coordinator.submit(makeInput(), state: state)
+    try await coordinator.submit(makeInput(), progress: progress)
 
     #expect(service.events == [
       .freshservice(compnowTicketId: "CN-42"),
       .checkIn(assetId: 7),
       .checkout(assetId: 7, userId: 19),
     ])
-    #expect(state.isComplete)
+    #expect(progress.spareCheckedOut)
   }
 
   @Test("missing spare user fails before tickets are created")
   func validatesBeforeExternalWork() async {
     let service = TestRepairService()
-    let state = RepairSubmissionState()
+    let progress = RepairProgress()
     let coordinator = RepairCoordinator(service: service)
-    let input = makeInput(snipeItUserId: nil)
 
-    await coordinator.submit(input, state: state)
+    do {
+      try await coordinator.submit(makeInput(snipeItUserId: nil), progress: progress)
+      Issue.record("A spare cannot be checked out without a Snipe-IT user")
+    } catch {
+      #expect(error.localizedDescription == "No Snipe-IT user matches the end-user email.")
+    }
 
     #expect(service.events.isEmpty)
-    #expect(state.errorMessage == "No Snipe-IT user matches the end-user email.")
-    #expect(!state.hasStarted)
+    #expect(progress.compnowTicketId == nil)
   }
 
   @Test("repair performs only the selected outcomes")
-  func performsOnlySelectedOutcomes() async {
+  func performsOnlySelectedOutcomes() async throws {
     let service = TestRepairService()
-    let state = RepairSubmissionState()
     let coordinator = RepairCoordinator(service: service)
 
-    await coordinator.submit(
+    try await coordinator.submit(
       makeInput(createFreshserviceTicket: false, includesSpare: false),
-      state: state
+      progress: RepairProgress()
     )
 
     #expect(service.events == [.compnow])
-    #expect(state.isComplete)
   }
 
   private func makeInput(
