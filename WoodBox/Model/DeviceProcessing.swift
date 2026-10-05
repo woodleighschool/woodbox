@@ -78,7 +78,8 @@ nonisolated enum DeviceProcessingError: LocalizedError {
 
 @Model
 final class DeviceProcessingItem {
-  @Attribute(.unique) var key: String
+  #Unique<DeviceProcessingItem>([\.profileRawValue, \.serial])
+
   var profileRawValue: String
 
   var serial: String
@@ -92,7 +93,6 @@ final class DeviceProcessingItem {
 
   init(_ draft: DeviceProcessingDraft, addedAt: Date = .now) {
     let device = draft.device
-    key = device.serial
     profileRawValue = draft.profile.rawValue
     serial = device.serial
     assetTag = device.assetTag

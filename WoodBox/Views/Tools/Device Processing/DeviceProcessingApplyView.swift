@@ -47,7 +47,7 @@ struct DeviceProcessingApplyView: View {
               assetTag: item.assetTag,
               serial: item.serial
             ) {
-              ActivityLabel(activity: activities[item.key] ?? .waiting)
+              ActivityLabel(activity: activities[item.serial] ?? .waiting)
             }
           }
         } header: {
@@ -121,7 +121,7 @@ struct DeviceProcessingApplyView: View {
 
     for item in items {
       guard !Task.isCancelled else { break }
-      activities[item.key] = .working("Preparing")
+      activities[item.serial] = .working("Preparing")
 
       let outcome = await coordinator.process(
         item: item,
@@ -131,14 +131,14 @@ struct DeviceProcessingApplyView: View {
         conditionField: modelData.settings.snipeItConditionField,
         conditionNotesField: modelData.settings.snipeItConditionNotesField
       ) { message in
-        activities[item.key] = .working(message)
+        activities[item.serial] = .working(message)
       }
 
       switch outcome {
       case .applied:
-        activities[item.key] = .applied
+        activities[item.serial] = .applied
       case let .failed(message):
-        activities[item.key] = .failed(message)
+        activities[item.serial] = .failed(message)
       }
     }
 

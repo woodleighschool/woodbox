@@ -18,6 +18,20 @@ struct DeviceProcessingCoordinatorTests {
     #expect(item.conditionNotes == "Light wear")
   }
 
+  @Test("a device can be listed for Restock and Sale at once, but only once in each")
+  func listsAreIndependent() throws {
+    let fixture = try ProcessingFixture()
+    let device = fixture.makeDevice(assigned: false)
+    for profile in [DeviceProcessingProfile.restock, .sale, .restock] {
+      _ = fixture.makeItem(profile: profile, device: device)
+    }
+    try fixture.context.save()
+
+    let items = try fixture.context.fetch(FetchDescriptor<DeviceProcessingItem>())
+    #expect(Set(items.map(\.profile)) == [.restock, .sale])
+    #expect(items.count == 2)
+  }
+
   @Test("an assigned Sale device is removed from MDM before check-in and condition update")
   func processesAssignedSaleDeviceInOrder() async throws {
     let fixture = try ProcessingFixture()

@@ -17,8 +17,7 @@ struct DeviceProcessingView: View {
   @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
 
-  @Query(sort: [SortDescriptor(\DeviceProcessingItem.addedAt)])
-  private var allItems: [DeviceProcessingItem]
+  @Query private var items: [DeviceProcessingItem]
 
   @Query(sort: [SortDescriptor(\SnipeItStatus.name)])
   private var statuses: [SnipeItStatus]
@@ -36,8 +35,13 @@ struct DeviceProcessingView: View {
     @FocusState private var scannerInputFocused: Bool
   #endif
 
-  private var items: [DeviceProcessingItem] {
-    allItems.filter { $0.profile == profile }
+  init(profile: DeviceProcessingProfile) {
+    self.profile = profile
+    let rawValue = profile.rawValue
+    _items = Query(
+      filter: #Predicate { $0.profileRawValue == rawValue },
+      sort: \.addedAt
+    )
   }
 
   private var targetStatus: SnipeItStatus? {
@@ -262,8 +266,8 @@ struct DeviceProcessingView: View {
   }
 
   private func validate(_ device: Device) throws {
-    if let existing = allItems.first(where: { $0.serial == device.serial }) {
-      throw DeviceProcessingError.alreadyQueued(existing.profile)
+    if items.contains(where: { $0.serial == device.serial }) {
+      throw DeviceProcessingError.alreadyQueued(profile)
     }
   }
 
