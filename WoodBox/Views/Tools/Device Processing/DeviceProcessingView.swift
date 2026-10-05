@@ -26,12 +26,13 @@ struct DeviceProcessingView: View {
 
   @State private var selectedStatusId: Int?
   @State private var searchQuery = ""
-  @State private var scannerInput = ""
   @State private var showClearConfirmation = false
   @State private var alertItem: AlertItem?
   @State private var presentedSheet: PresentedSheet?
 
   #if os(macOS)
+    @State private var scannerInput = ""
+    @State private var scanStatus: String?
     @FocusState private var scannerInputFocused: Bool
   #endif
 
@@ -64,8 +65,7 @@ struct DeviceProcessingView: View {
       .searchSuggestions {
         ForEach(searchResults) { device in
           Button {
-            beginCapture(for: device)
-            searchQuery = ""
+            addFromSearch(device)
           } label: {
             DeviceSearchResultLabel(device: device)
           }
@@ -73,8 +73,7 @@ struct DeviceProcessingView: View {
       }
       .onSubmit(of: .search) {
         guard let device = searchResults.first else { return }
-        beginCapture(for: device)
-        searchQuery = ""
+        addFromSearch(device)
       }
       .confirmationDialog(
         "Clear \(profile.title) Queue?",
@@ -100,7 +99,7 @@ struct DeviceProcessingView: View {
             DeviceProcessingCaptureView(
               profile: profile,
               start: capture.start,
-              candidate: resolveCandidate,
+              isListed: isListed,
               commit: commit
             )
             .presentationDetents([.medium])
@@ -151,10 +150,14 @@ struct DeviceProcessingView: View {
           .frame(maxWidth: .infinity)
           .listRowBackground(Color.clear)
         } else {
-          Section("Devices") {
+          Section {
             ForEach(items) { item in
               DeviceProcessingQueueRow(item: item)
             }
+          } header: {
+            Text("Devices")
+          } footer: {
+            deviceCount
           }
         }
       }
@@ -207,6 +210,15 @@ struct DeviceProcessingView: View {
       VStack(spacing: 0) {
         macOSControls
 
+        if let scanStatus {
+          Text(scanStatus)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+        }
+
         Divider()
 
         if items.isEmpty {
@@ -220,6 +232,7 @@ struct DeviceProcessingView: View {
           DeviceProcessingTable(items: items, profile: profile, onRemove: remove)
         }
       }
+      .navigationSubtitle(items.isEmpty ? Text(verbatim: "") : deviceCount)
       .toolbar { macOSToolbar }
       .onAppear { scannerInputFocused = true }
     }
@@ -265,14 +278,20 @@ struct DeviceProcessingView: View {
     selectedStatusId = statuses.contains { $0.snipeItId == remembered } ? remembered : nil
   }
 
-  private func validate(_ device: Device) throws {
-    if items.contains(where: { $0.serial == device.serial }) {
-      throw DeviceProcessingError.alreadyQueued(profile)
-    }
+  private var deviceCount: Text {
+    Text("^[\(items.count) device](inflect: true)")
+  }
+
+  private func isListed(_ device: Device) throws -> Bool {
+    let serial = device.serial
+    let profile = profile.rawValue
+    let descriptor = FetchDescriptor<DeviceProcessingItem>(
+      predicate: #Predicate { $0.serial == serial && $0.profileRawValue == profile }
+    )
+    return try modelContext.fetchCount(descriptor) > 0
   }
 
   private func commit(_ draft: DeviceProcessingDraft) throws {
-    try validate(draft.device)
     let item = DeviceProcessingItem(draft)
     modelContext.insert(item)
     do {
@@ -283,45 +302,45 @@ struct DeviceProcessingView: View {
     }
   }
 
-  private func beginCapture(for device: Device) {
+  /// Adds the device, or opens the condition form for Sale. Returns false when it is already listed.
+  private func add(_ device: Device) throws -> Bool {
+    guard try !isListed(device) else { return false }
+    switch profile {
+    case .restock:
+      try commit(.restock(device))
+    case .sale:
+      presentCapture(start: .condition(device))
+    }
+    return true
+  }
+
+  private func addFromSearch(_ device: Device) {
+    searchQuery = ""
     do {
-      switch profile {
-      case .restock:
-        try commit(.restock(device))
-      case .sale:
-        try validate(device)
-        presentCapture(start: .condition(device))
-      }
+      _ = try add(device)
     } catch {
       present(error)
     }
   }
 
-  #if os(iOS)
-    private func resolveCandidate(_ value: String, _ scanType: ScanType) throws -> Device {
-      guard let device = modelContext.fetchDevice(matching: value, scanType: scanType) else {
-        throw DeviceProcessingError.deviceNotFound("\(scanType.label) “\(value)”")
+  #if os(macOS)
+    private func addScannerInput() {
+      guard let value = scannerInput.nilIfEmpty else { return }
+      scannerInput = ""
+      scannerInputFocused = true
+
+      guard let device = modelContext.fetchDevice(matchingIdentifier: value) else {
+        scanStatus = "No device matches “\(value)”."
+        return
       }
-      try validate(device)
-      return device
+      do {
+        // A USB scanner keeps typing, so its results show inline instead of in an alert.
+        scanStatus = try add(device) ? nil : "\(device.assetTag) is already in the list."
+      } catch {
+        present(error)
+      }
     }
   #endif
-
-  private func addScannerInput() {
-    guard let value = scannerInput.nilIfEmpty else { return }
-    defer {
-      scannerInput = ""
-      #if os(macOS)
-        scannerInputFocused = true
-      #endif
-    }
-
-    guard let device = modelContext.fetchDevice(matchingIdentifier: value) else {
-      present(DeviceProcessingError.deviceNotFound("asset tag or serial number “\(value)”"))
-      return
-    }
-    beginCapture(for: device)
-  }
 
   private func present(_ error: any Error) {
     alertItem = AlertItem(title: "Unable to Add Device", message: error.localizedDescription)

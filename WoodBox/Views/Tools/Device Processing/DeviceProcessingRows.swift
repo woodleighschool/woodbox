@@ -50,7 +50,7 @@ struct DeviceSearchResultLabel: View {
     }
 
     private var device: Device? {
-      modelContext.fetchDevice(matching: item.serial, scanType: .serial)
+      modelContext.fetchDevice(serial: item.serial)
     }
   }
 

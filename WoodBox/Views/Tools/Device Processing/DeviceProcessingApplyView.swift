@@ -149,7 +149,7 @@ struct DeviceProcessingApplyView: View {
   }
 
   private func device(for item: DeviceProcessingItem) -> Device? {
-    modelContext.fetchDevice(matching: item.serial, scanType: .serial)
+    modelContext.fetchDevice(serial: item.serial)
   }
 
   private struct ActivityLabel: View {

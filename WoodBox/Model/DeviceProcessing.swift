@@ -62,20 +62,6 @@ nonisolated enum DeviceProcessingDraft {
   }
 }
 
-nonisolated enum DeviceProcessingError: LocalizedError {
-  case deviceNotFound(String)
-  case alreadyQueued(DeviceProcessingProfile)
-
-  var errorDescription: String? {
-    switch self {
-    case let .deviceNotFound(identifier):
-      "No device with \(identifier) was found."
-    case let .alreadyQueued(profile):
-      "This device is already in the \(profile.title) queue."
-    }
-  }
-}
-
 @Model
 final class DeviceProcessingItem {
   #Unique<DeviceProcessingItem>([\.profileRawValue, \.serial])

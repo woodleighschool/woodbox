@@ -18,14 +18,14 @@ struct DeviceProcessingCaptureView: View {
 
   #if os(iOS)
     let profile: DeviceProcessingProfile
-    let candidate: (String, ScanType) throws -> Device
+    let isListed: (Device) throws -> Bool
   #endif
   let commit: (DeviceProcessingDraft) throws -> Void
 
   @State private var phase: Phase
   @State private var grade: SaleGrade?
   @State private var notes = ""
-  @State private var feedbackTrigger = 0
+  @State private var session = DeviceScanSession()
   @State private var alertItem: AlertItem?
 
   @Environment(\.dismiss) private var dismiss
@@ -36,11 +36,11 @@ struct DeviceProcessingCaptureView: View {
     init(
       profile: DeviceProcessingProfile,
       start: DeviceProcessingCapture.Start,
-      candidate: @escaping (String, ScanType) throws -> Device,
+      isListed: @escaping (Device) throws -> Bool,
       commit: @escaping (DeviceProcessingDraft) throws -> Void
     ) {
       self.profile = profile
-      self.candidate = candidate
+      self.isListed = isListed
       self.commit = commit
 
       switch start {
@@ -72,8 +72,11 @@ struct DeviceProcessingCaptureView: View {
 
   var body: some View {
     NavigationStack {
-      content
+      ZStack {
+        content
+      }
     }
+    .sensoryFeedback(.success, trigger: session.addedSerials.count)
     .alert(item: $alertItem) { item in
       Alert(
         title: Text(item.title),
@@ -89,12 +92,13 @@ struct DeviceProcessingCaptureView: View {
     case .scanner:
       #if os(iOS)
         DeviceScanner(
+          session: $session,
           title: "Scan Devices",
           subtitle: profile.requiresCondition
             ? "Grade each device as you scan"
             : "Keep scanning to build the queue",
-          trigger: feedbackTrigger,
-          onCandidate: handleCandidate
+          showsCount: true,
+          onDevice: handleDevice
         )
         .transition(.move(edge: .leading).combined(with: .opacity))
       #else
@@ -134,22 +138,27 @@ struct DeviceProcessingCaptureView: View {
   }
 
   #if os(iOS)
-    private func handleCandidate(_ value: String, type: ScanType) {
+    private func handleDevice(_ device: Device) {
+      guard case .scanner = phase else { return }
       do {
-        let device = try candidate(value, type)
+        guard try !isListed(device) else {
+          // The camera often lingers on a device it has just added.
+          if !session.addedSerials.contains(device.serial) {
+            session.report("\(device.assetTag) is already in the list")
+          }
+          return
+        }
         switch profile {
         case .restock:
           try commit(.restock(device))
-          feedbackTrigger += 1
+          session.added(serial: device.serial, label: device.assetTag)
         case .sale:
-          grade = nil
-          notes = ""
           withAnimation(.snappy) {
             phase = .condition(device)
           }
         }
       } catch {
-        alertItem = AlertItem(title: "Unable to Add Device", message: error.localizedDescription)
+        session.report("Unable to add device: \(error.localizedDescription)", immediately: true)
       }
     }
   #endif
@@ -167,18 +176,15 @@ struct DeviceProcessingCaptureView: View {
 
     do {
       try commit(.sale(device, grade: grade, conditionNotes: notes))
-      feedbackTrigger += 1
-      self.grade = nil
-      notes = ""
-      if returnsToScanner {
-        withAnimation(.snappy) {
-          phase = .scanner
-        }
-      } else {
-        dismiss()
-      }
     } catch {
       alertItem = AlertItem(title: "Unable to Add Device", message: error.localizedDescription)
+      return
+    }
+    session.added(serial: device.serial, label: device.assetTag)
+    if returnsToScanner {
+      showScanner()
+    } else {
+      dismiss()
     }
   }
 }
