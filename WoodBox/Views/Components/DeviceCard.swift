@@ -73,15 +73,15 @@ struct DeviceSummaryItem<Accessory: View>: View {
       DeviceIdentifiersRow(assetTag: device.assetTag, serial: device.serial)
       #if os(macOS)
         if let storage = device.storage.nilIfEmpty {
-          Label(storage, systemImage: "internaldrive")
+          Text(storage, symbol: "internaldrive")
         }
         if let ram = device.ram.nilIfEmpty {
-          Label(ram, systemImage: "memorychip")
+          Text(ram, symbol: "memorychip")
         }
         if let expires = device.warrantyExpires {
-          Label(
+          Text(
             expires.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits)),
-            systemImage: "shield"
+            symbol: "shield"
           )
         }
       #endif
@@ -164,10 +164,17 @@ struct DeviceIdentifiersRow: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      Label(assetTag, systemImage: "barcode")
-      Label(serial, systemImage: "number")
+      Text(assetTag, symbol: "barcode")
+      Text(serial, symbol: "number")
     }
     .lineLimit(1)
+  }
+}
+
+private extension Text {
+  /// Sets a symbol inline with its value. A `Label` in a list row reserves a full icon column instead.
+  init(_ value: String, symbol: String) {
+    self.init("\(Image(systemName: symbol)) \(value)")
   }
 }
 
