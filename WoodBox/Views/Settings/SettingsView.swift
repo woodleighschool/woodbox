@@ -85,17 +85,11 @@ struct SettingsView: View {
         NavigationLink {
           settingsDestination(section)
             .navigationTitle(section.title)
-            .refreshable {
-              await modelData.cacheManager.sync()
-            }
         } label: {
           Label(section.title, systemImage: section.systemImage)
         }
       }
       .navigationTitle("Settings")
-      .refreshable {
-        await modelData.cacheManager.sync()
-      }
     #endif
   }
 
@@ -173,14 +167,10 @@ struct SnipeItSettingsView: View {
           }
         }
 
-        #if os(macOS)
-          Button {
-            Task { await cacheManager.sync() }
-          } label: {
-            Label("Refresh Statuses", systemImage: "arrow.clockwise")
-          }
-          .disabled(settings.snipeItIsEnabled == false || cacheManager.isSyncing)
-        #endif
+        Button("Refresh Statuses", systemImage: "arrow.clockwise") {
+          Task { await cacheManager.sync() }
+        }
+        .disabled(settings.snipeItIsEnabled == false || cacheManager.isSyncing)
       }
     }
     .formStyle(.grouped)

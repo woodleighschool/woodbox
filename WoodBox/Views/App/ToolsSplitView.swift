@@ -77,7 +77,10 @@ struct ToolsSplitView: View {
         }
       }
       .sheet(isPresented: $isSettingsSheetPresented) {
-        settingsSheet
+        NavigationStack {
+          SettingsView()
+        }
+        .presentationDragIndicator(.visible)
       }
     }
 
@@ -150,19 +153,4 @@ struct ToolsSplitView: View {
       DeviceDeduplicationView()
     }
   }
-
-  #if os(iOS)
-    private var settingsSheet: some View {
-      NavigationStack {
-        SettingsView()
-          .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-              Button("Done") {
-                isSettingsSheetPresented = false
-              }
-            }
-          }
-      }
-    }
-  #endif
 }
