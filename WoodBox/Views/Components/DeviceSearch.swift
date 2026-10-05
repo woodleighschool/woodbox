@@ -83,10 +83,8 @@ private struct DeviceSearchBody<Content: View>: View {
           .presentationDragIndicator(.visible)
       }
       .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Scan Device", systemImage: "camera.viewfinder") {
-            isScanningDevice = true
-          }
+        ScanSearchToolbar {
+          isScanningDevice = true
         }
       }
     #endif

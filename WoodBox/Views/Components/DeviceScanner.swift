@@ -144,6 +144,21 @@ import SwiftUI
     }
   }
 
+  /// Keeps the scan button beside the search field, which sits in the bottom bar at compact width
+  /// and in the navigation bar otherwise.
+  struct ScanSearchToolbar: ToolbarContent {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let scan: () -> Void
+
+    var body: some ToolbarContent {
+      DefaultToolbarItem(kind: .search, placement: .bottomBar)
+      ToolbarSpacer(.fixed, placement: .bottomBar)
+      ToolbarItem(placement: horizontalSizeClass == .compact ? .bottomBar : .topBarTrailing) {
+        Button("Scan", systemImage: "camera.viewfinder", action: scan)
+      }
+    }
+  }
+
   /// VisionKit owns camera recognition; workflow and feedback state stay in SwiftUI.
   private struct DeviceScannerCameraView: UIViewControllerRepresentable {
     var onCandidates: ([DeviceScan]) -> Void

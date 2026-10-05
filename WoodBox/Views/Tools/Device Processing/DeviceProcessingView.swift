@@ -179,10 +179,8 @@ struct DeviceProcessingView: View {
 
     @ToolbarContentBuilder
     private var iOSToolbar: some ToolbarContent {
-      ToolbarItem(placement: .topBarTrailing) {
-        Button("Scan", systemImage: "camera.viewfinder") {
-          presentCapture(start: .scanner)
-        }
+      ScanSearchToolbar {
+        presentCapture(start: .scanner)
       }
 
       ToolbarItem(placement: .topBarTrailing) {
