@@ -28,17 +28,26 @@ final class CacheManager {
 
   @ObservationIgnored
   var lastSyncDate: Date? {
-    get { UserDefaults.standard.object(forKey: "LastSyncDate") as? Date }
-    set { UserDefaults.standard.set(newValue, forKey: "LastSyncDate") }
+    get { defaults.object(forKey: "LastSyncDate") as? Date }
+    set { defaults.set(newValue, forKey: "LastSyncDate") }
   }
 
   private let modelContext: ModelContext
   private let settings = AppSettings.shared
+  private let defaults: UserDefaults
+  private let fetchSnapshot: () async throws -> Snapshot
+  @ObservationIgnored private var syncTask: Task<Void, Never>?
 
   // MARK: - Init
 
-  init(modelContext: ModelContext) {
+  init(
+    modelContext: ModelContext,
+    defaults: UserDefaults = .standard,
+    fetchSnapshot: @escaping () async throws -> Snapshot = { try await Snapshot.fetch() }
+  ) {
     self.modelContext = modelContext
+    self.defaults = defaults
+    self.fetchSnapshot = fetchSnapshot
     status = .synced(date: lastSyncDate)
   }
 
@@ -50,52 +59,48 @@ final class CacheManager {
   }
 
   func sync() async {
-    guard !isSyncing else { return }
-    status = .syncing(message: "Syncing...")
-
-    guard settings.snipeItIsEnabled else {
-      try? clearDeviceCache()
-      try? clearUserCache()
-      try? clearStatusCache()
-      markAsSynced()
+    if let syncTask {
+      await syncTask.value
       return
     }
 
+    // Refresh belongs to the cache, not to whichever view first requested it.
+    let task = Task {
+      status = .syncing(message: "Syncing…")
+      do {
+        let snapshot = try await fetchSnapshot()
+        try process(snapshot)
+        markAsSynced()
+      } catch {
+        status = .failed(message: error.localizedDescription, date: Date())
+      }
+      syncTask = nil
+    }
+    syncTask = task
+    await task.value
+  }
+
+  func syncAfterChanges() async {
+    // A snapshot requested before a mutation cannot confirm its outcome.
+    await syncTask?.value
+    await sync()
+  }
+
+  func purgeAllDeviceData() async {
+    await syncTask?.value
+    status = .syncing(message: "Purging...")
+
     do {
-      async let snipeItAssets = fetchSnipeItAssets()
-      async let snipeItUsers = fetchSnipeItUsers()
-      async let snipeItStatuses = fetchSnipeItStatuses()
-      async let jamfComputers = fetchJamfComputers()
-      async let jamfMobiles = fetchJamfMobileDevices()
-      async let intuneDevices = fetchIntuneDevices()
-
-      try await process(
-        snipeItAssets: snipeItAssets,
-        snipeItUsers: snipeItUsers,
-        snipeItStatuses: snipeItStatuses,
-        jamfComputers: jamfComputers,
-        jamfMobiles: jamfMobiles,
-        intuneDevices: intuneDevices
-      )
-
+      try process(Snapshot())
       markAsSynced()
     } catch {
       status = .failed(message: error.localizedDescription, date: Date())
     }
   }
 
-  func purgeAllDeviceData() async {
-    guard !isSyncing else { return }
-    status = .syncing(message: "Purging...")
-
-    try? clearDeviceCache()
-    try? clearUserCache()
-    try? clearStatusCache()
-    markAsSynced()
-  }
-
   func removeMDMRecords(for providers: Set<MDMProvider>) async {
-    guard !isSyncing, settings.snipeItIsEnabled else { return }
+    await syncTask?.value
+    guard settings.snipeItIsEnabled else { return }
     status = .syncing(message: "Updating Records...")
 
     do {
@@ -121,74 +126,49 @@ final class CacheManager {
 
   // MARK: - Fetchers
 
-  private var snipeItClient: SnipeITClient? {
-    guard settings.snipeItIsEnabled, let url = URL(string: settings.snipeItBaseURL) else {
-      return nil
+  struct Snapshot {
+    var assets: [SnipeItAssetResponse] = []
+    var users: [SnipeItUserResponse] = []
+    var statuses: [SnipeItStatusResponse] = []
+    var computers: [JamfComputer] = []
+    var mobiles: [JamfMobileDevice] = []
+    var intuneDevices: [IntuneDevice] = []
+
+    static func fetch() async throws -> Self {
+      let settings = AppSettings.shared
+      guard settings.snipeItIsEnabled else { return Self() }
+      guard let snipe = settings.snipeItClient else {
+        throw IntegrationError(action: "refresh cache", integration: "Snipe-IT", message: "The server URL is invalid")
+      }
+      let jamf = settings.jamfClient
+      let intune = settings.intuneClient
+
+      async let assets = snipe.fetchSnipeItAssets()
+      async let users = snipe.fetchSnipeItUsers()
+      async let statuses = snipe.fetchSnipeItStatuses()
+      async let computers = jamf?.fetchJamfComputers() ?? []
+      async let mobiles = jamf?.fetchJamfMobileDevices() ?? []
+      async let intuneDevices = intune?.fetchIntuneDevices() ?? []
+      return try await Self(
+        assets: assets, users: users, statuses: statuses,
+        computers: computers, mobiles: mobiles, intuneDevices: intuneDevices
+      )
     }
-    return SnipeITClient(baseURL: url, apiToken: settings.snipeItAPIKey)
-  }
-
-  private var jamfClient: JamfClient? {
-    guard settings.snipeItIsEnabled, settings.jamfIsEnabled,
-          let url = URL(string: settings.jamfBaseURL)
-    else { return nil }
-    return JamfClient(
-      baseURL: url, clientId: settings.jamfClientId, clientSecret: settings.jamfClientSecret
-    )
-  }
-
-  private var intuneClient: IntuneClient? {
-    guard settings.snipeItIsEnabled, settings.intuneIsEnabled else { return nil }
-    return IntuneClient(
-      tenantId: settings.intuneTenantId, clientId: settings.intuneClientId,
-      clientSecret: settings.intuneClientSecret
-    )
-  }
-
-  private func fetchSnipeItAssets() async throws -> [SnipeItAssetResponse] {
-    try await snipeItClient?.fetchSnipeItAssets() ?? []
-  }
-
-  private func fetchSnipeItUsers() async throws -> [SnipeItUserResponse] {
-    try await snipeItClient?.fetchSnipeItUsers() ?? []
-  }
-
-  private func fetchSnipeItStatuses() async throws -> [SnipeItStatusResponse] {
-    try await snipeItClient?.fetchSnipeItStatuses() ?? []
-  }
-
-  private func fetchJamfComputers() async throws -> [JamfComputer] {
-    try await jamfClient?.fetchJamfComputers() ?? []
-  }
-
-  private func fetchJamfMobileDevices() async throws -> [JamfMobileDevice] {
-    try await jamfClient?.fetchJamfMobileDevices() ?? []
-  }
-
-  private func fetchIntuneDevices() async throws -> [IntuneDevice] {
-    try await intuneClient?.fetchIntuneDevices() ?? []
   }
 
   // MARK: - Processing
 
-  private func process(
-    snipeItAssets: [SnipeItAssetResponse],
-    snipeItUsers: [SnipeItUserResponse],
-    snipeItStatuses: [SnipeItStatusResponse],
-    jamfComputers: [JamfComputer],
-    jamfMobiles: [JamfMobileDevice],
-    intuneDevices: [IntuneDevice]
-  ) async throws {
-    try processUsers(snipeItUsers)
-    try processStatuses(snipeItStatuses)
-    let jamfComputerMap = Dictionary(grouping: jamfComputers, by: \.hardware.serialNumber)
-    let jamfMobileMap = Dictionary(grouping: jamfMobiles, by: \.hardware.serialNumber)
-    let intuneMap = Dictionary(grouping: intuneDevices, by: \.serialNumber)
+  private func process(_ snapshot: Snapshot) throws {
+    try processUsers(snapshot.users)
+    try processStatuses(snapshot.statuses)
+    let jamfComputerMap = Dictionary(grouping: snapshot.computers, by: \.hardware.serialNumber)
+    let jamfMobileMap = Dictionary(grouping: snapshot.mobiles, by: \.hardware.serialNumber)
+    let intuneMap = Dictionary(grouping: snapshot.intuneDevices, by: \.serialNumber)
 
     let existingDevices = try modelContext.fetch(FetchDescriptor<Device>())
     var deviceMap = Dictionary(uniqueKeysWithValues: existingDevices.map { ($0.serial, $0) })
 
-    for asset in snipeItAssets {
+    for asset in snapshot.assets {
       let serial = asset.serial
 
       let device: Device
@@ -264,6 +244,10 @@ final class CacheManager {
       device.mdmRecords = records
     }
 
+    let activeSerials = Set(snapshot.assets.map(\.serial))
+    for device in existingDevices where !activeSerials.contains(device.serial) {
+      modelContext.delete(device)
+    }
     try modelContext.save()
   }
 
@@ -281,21 +265,6 @@ final class CacheManager {
     let now = Date()
     lastSyncDate = now
     status = .synced(date: now)
-  }
-
-  private func clearDeviceCache() throws {
-    try modelContext.delete(model: Device.self)
-    try modelContext.save()
-  }
-
-  private func clearUserCache() throws {
-    try modelContext.delete(model: SnipeItUser.self)
-    try modelContext.save()
-  }
-
-  private func clearStatusCache() throws {
-    try modelContext.delete(model: SnipeItStatus.self)
-    try modelContext.save()
   }
 
   private func processUsers(_ snipeItUsers: [SnipeItUserResponse]) throws {

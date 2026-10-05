@@ -143,7 +143,7 @@ struct DeviceProcessingApplyView: View {
     }
 
     if !Task.isCancelled {
-      await modelData.cacheManager.sync()
+      await modelData.cacheManager.syncAfterChanges()
     }
     runState = .finished
   }
