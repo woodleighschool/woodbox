@@ -61,9 +61,7 @@ struct ToolsSplitView: View {
           }
         }
         .navigationTitle("WoodBox")
-        .refreshable {
-          await refreshCache()
-        }
+        .cacheRefreshable()
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
             Button("Settings", systemImage: "gearshape") {
@@ -82,10 +80,6 @@ struct ToolsSplitView: View {
         }
         .presentationDragIndicator(.visible)
       }
-    }
-
-    private func refreshCache() async {
-      await modelData.cacheManager.sync()
     }
   #else
     private var navigationTabs: [AppTab] {

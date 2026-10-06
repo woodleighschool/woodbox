@@ -58,30 +58,26 @@ struct RepairIntakeView: View {
     }
     .formStyle(.grouped)
     .disabled(isSubmitting)
-    #if os(iOS)
-      .refreshable {
-        await modelData.cacheManager.sync()
+    .cacheRefreshable()
+    .deviceSearch(selection: deviceSelection)
+    .scrollDismissesKeyboard(.interactively)
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) {
+        submitButton
       }
-    #endif
-      .deviceSearch(selection: deviceSelection)
-      .scrollDismissesKeyboard(.interactively)
-      .toolbar {
-        ToolbarItem(placement: .confirmationAction) {
-          submitButton
-        }
-      }
-      .alert(item: $alertItem) { item in
-        Alert(
-          title: Text(item.title),
-          message: Text(item.message),
-          dismissButton: .default(Text("OK"))
-        )
-      }
-      .onChange(of: deviceSelection.selectedDevice?.serial, initial: true) { _, _ in
-        // Completed steps belong to the device they were submitted for.
-        progress = RepairProgress()
-        syncFormWithSelection()
-      }
+    }
+    .alert(item: $alertItem) { item in
+      Alert(
+        title: Text(item.title),
+        message: Text(item.message),
+        dismissButton: .default(Text("OK"))
+      )
+    }
+    .onChange(of: deviceSelection.selectedDevice?.serial, initial: true) { _, _ in
+      // Completed steps belong to the device they were submitted for.
+      progress = RepairProgress()
+      syncFormWithSelection()
+    }
   }
 
   private var deviceSection: some View {

@@ -34,11 +34,7 @@ struct DeviceDeduplicationView: View {
         }
       }
     }
-    #if os(iOS)
-    .refreshable {
-      await modelData.cacheManager.sync()
-    }
-    #endif
+    .cacheRefreshable()
     .alert(item: $alertItem) { item in
       Alert(
         title: Text(item.title),

@@ -78,3 +78,41 @@ struct CacheRefreshButton: View {
     }
   }
 }
+
+extension View {
+  /// Pull to refresh the cache on iOS, reporting a failure in an alert. macOS refreshes from the toolbar.
+  func cacheRefreshable() -> some View {
+    #if os(iOS)
+      modifier(CacheRefreshable())
+    #else
+      self
+    #endif
+  }
+}
+
+#if os(iOS)
+  private struct CacheRefreshable: ViewModifier {
+    @Environment(ModelData.self) private var modelData
+
+    @State private var failureMessage = ""
+    @State private var isFailurePresented = false
+
+    func body(content: Content) -> some View {
+      content
+        .refreshable {
+          let cacheManager = modelData.cacheManager
+          await cacheManager.sync()
+
+          if case let .failed(message, _) = cacheManager.status {
+            failureMessage = message
+            isFailurePresented = true
+          }
+        }
+        .alert("Cache Refresh Failed", isPresented: $isFailurePresented) {
+          Button("OK", role: .cancel) {}
+        } message: {
+          Text(failureMessage)
+        }
+    }
+  }
+#endif

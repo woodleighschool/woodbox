@@ -162,9 +162,7 @@ struct DeviceProcessingView: View {
         }
       }
       .navigationTitle(profile.title)
-      .refreshable {
-        await modelData.cacheManager.sync()
-      }
+      .cacheRefreshable()
       .scrollDismissesKeyboard(.interactively)
       .toolbar { iOSToolbar }
     }
