@@ -137,11 +137,12 @@ final class CacheManager {
     static func fetch() async throws -> Self {
       let settings = AppSettings.shared
       guard settings.snipeItIsEnabled else { return Self() }
-      guard let snipe = settings.snipeItClient else {
-        throw IntegrationError(action: "refresh cache", integration: "Snipe-IT", message: "The server URL is invalid")
-      }
-      let jamf = settings.jamfClient
-      let intune = settings.intuneClient
+      let snipe = try configured(settings.configuredSnipeItClient, "Snipe-IT")
+      // An enabled provider has to take part. Leaving it out would drop its records from the cache.
+      let jamf = settings.jamfIsEnabled ? try configured(settings.configuredJamfClient, "Jamf") : nil
+      let intune = settings.intuneIsEnabled
+        ? try configured(settings.configuredIntuneClient, "Intune")
+        : nil
 
       async let assets = snipe.fetchSnipeItAssets()
       async let users = snipe.fetchSnipeItUsers()
@@ -153,6 +154,17 @@ final class CacheManager {
         assets: assets, users: users, statuses: statuses,
         computers: computers, mobiles: mobiles, intuneDevices: intuneDevices
       )
+    }
+
+    private static func configured<Client>(_ client: Client?, _ integration: String) throws -> Client {
+      guard let client else {
+        throw IntegrationError(
+          action: "refresh cache",
+          integration: integration,
+          message: "Required settings are missing"
+        )
+      }
+      return client
     }
   }
 

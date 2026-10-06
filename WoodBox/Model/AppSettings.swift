@@ -276,7 +276,32 @@ extension AppSettings {
   }
 
   var compnowClient: CompnowClient? {
-    guard compnowIsEnabled else { return nil }
+    compnowIsEnabled ? configuredCompnowClient : nil
+  }
+
+  var freshserviceClient: FreshserviceClient? {
+    freshserviceIsEnabled ? configuredFreshserviceClient : nil
+  }
+
+  var snipeItClient: SnipeITClient? {
+    snipeItIsEnabled ? configuredSnipeItClient : nil
+  }
+
+  var jamfClient: JamfClient? {
+    jamfIsEnabled ? configuredJamfClient : nil
+  }
+
+  var intuneClient: IntuneClient? {
+    intuneIsEnabled ? configuredIntuneClient : nil
+  }
+
+  // Each configured client is the one its settings describe, whether or not the integration
+  // is enabled. It is nil while a setting it needs to connect is missing.
+
+  var configuredCompnowClient: CompnowClient? {
+    guard !compnowAPIKey.isEmpty, !compnowUsername.isEmpty, !compnowPassword.isEmpty else {
+      return nil
+    }
     return CompnowClient(
       apiKey: compnowAPIKey,
       username: compnowUsername,
@@ -284,23 +309,29 @@ extension AppSettings {
     )
   }
 
-  var freshserviceClient: FreshserviceClient? {
-    guard freshserviceIsEnabled, let url = URL(string: freshserviceBaseURL) else { return nil }
+  var configuredFreshserviceClient: FreshserviceClient? {
+    guard let url = URL(string: freshserviceBaseURL), !freshserviceAPIKey.isEmpty else {
+      return nil
+    }
     return FreshserviceClient(baseURL: url, apiKey: freshserviceAPIKey)
   }
 
-  var snipeItClient: SnipeITClient? {
-    guard snipeItIsEnabled, let url = URL(string: snipeItBaseURL) else { return nil }
+  var configuredSnipeItClient: SnipeITClient? {
+    guard let url = URL(string: snipeItBaseURL), !snipeItAPIKey.isEmpty else { return nil }
     return SnipeITClient(baseURL: url, apiToken: snipeItAPIKey)
   }
 
-  var jamfClient: JamfClient? {
-    guard jamfIsEnabled, let url = URL(string: jamfBaseURL) else { return nil }
+  var configuredJamfClient: JamfClient? {
+    guard let url = URL(string: jamfBaseURL), !jamfClientId.isEmpty, !jamfClientSecret.isEmpty else {
+      return nil
+    }
     return JamfClient(baseURL: url, clientId: jamfClientId, clientSecret: jamfClientSecret)
   }
 
-  var intuneClient: IntuneClient? {
-    guard intuneIsEnabled else { return nil }
+  var configuredIntuneClient: IntuneClient? {
+    guard !intuneTenantId.isEmpty, !intuneClientId.isEmpty, !intuneClientSecret.isEmpty else {
+      return nil
+    }
     return IntuneClient(
       tenantId: intuneTenantId,
       clientId: intuneClientId,

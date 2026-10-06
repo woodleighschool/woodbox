@@ -126,18 +126,21 @@ struct SnipeItSettingsView: View {
   var body: some View {
     Form {
       Section("Credentials") {
-        Toggle("Enabled", isOn: $settings.snipeItIsEnabled)
-          .onChange(of: settings.snipeItIsEnabled) { _, isOn in
-            Task {
-              if isOn {
-                await cacheManager.sync()
-              } else {
-                settings.jamfIsEnabled = false
-                settings.intuneIsEnabled = false
-                await cacheManager.purgeAllDeviceData()
-              }
+        EnabledToggle(
+          isOn: $settings.snipeItIsEnabled,
+          isConfigured: settings.configuredSnipeItClient != nil
+        )
+        .onChange(of: settings.snipeItIsEnabled) { _, isOn in
+          Task {
+            if isOn {
+              await cacheManager.sync()
+            } else {
+              settings.jamfIsEnabled = false
+              settings.intuneIsEnabled = false
+              await cacheManager.purgeAllDeviceData()
             }
           }
+        }
 
         TextField("Base URL", text: $settings.snipeItBaseURL)
         #if os(iOS)
@@ -145,9 +148,7 @@ struct SnipeItSettingsView: View {
         #endif
         SecureField("API Key", text: $settings.snipeItAPIKey)
 
-        ConnectionTestRow(disabled: settings.snipeItBaseURL.isEmpty) {
-          try await testConnection()
-        }
+        ConnectionTestRow(test: settings.configuredSnipeItClient?.testSnipeItConnection)
       }
 
       Section("Configuration") {
@@ -177,14 +178,6 @@ struct SnipeItSettingsView: View {
     .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
   }
-
-  // MARK: - Private Helpers
-
-  private func testConnection() async throws {
-    guard let url = URL(string: settings.snipeItBaseURL) else { throw URLError(.badURL) }
-    let client = SnipeITClient(baseURL: url, apiToken: settings.snipeItAPIKey)
-    try await client.testSnipeItConnection()
-  }
 }
 
 struct JamfSettingsView: View {
@@ -198,17 +191,20 @@ struct JamfSettingsView: View {
   var body: some View {
     Form {
       Section("Credentials") {
-        Toggle("Enabled", isOn: $settings.jamfIsEnabled)
-          .disabled(settings.snipeItIsEnabled == false)
-          .onChange(of: settings.jamfIsEnabled) { _, isOn in
-            Task {
-              if isOn {
-                await cacheManager.sync()
-              } else {
-                await cacheManager.removeMDMRecords(for: [.jamf])
-              }
+        EnabledToggle(
+          isOn: $settings.jamfIsEnabled,
+          isConfigured: settings.configuredJamfClient != nil
+        )
+        .disabled(settings.snipeItIsEnabled == false)
+        .onChange(of: settings.jamfIsEnabled) { _, isOn in
+          Task {
+            if isOn {
+              await cacheManager.sync()
+            } else {
+              await cacheManager.removeMDMRecords(for: [.jamf])
             }
           }
+        }
 
         TextField("Base URL", text: $settings.jamfBaseURL)
         #if os(iOS)
@@ -217,9 +213,7 @@ struct JamfSettingsView: View {
         TextField("Client ID", text: $settings.jamfClientId)
         SecureField("Client Secret", text: $settings.jamfClientSecret)
 
-        ConnectionTestRow(disabled: settings.jamfBaseURL.isEmpty) {
-          try await testConnection()
-        }
+        ConnectionTestRow(test: settings.configuredJamfClient?.testJamfConnection)
 
         if settings.snipeItIsEnabled == false {
           Text("Enable Snipe-IT first; Jamf only augments cached Snipe-IT devices.")
@@ -231,18 +225,6 @@ struct JamfSettingsView: View {
     .formStyle(.grouped)
     .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
-  }
-
-  // MARK: - Private Helpers
-
-  private func testConnection() async throws {
-    guard let url = URL(string: settings.jamfBaseURL) else { throw URLError(.badURL) }
-    let client = JamfClient(
-      baseURL: url,
-      clientId: settings.jamfClientId,
-      clientSecret: settings.jamfClientSecret
-    )
-    try await client.testJamfConnection()
   }
 }
 
@@ -257,25 +239,26 @@ struct IntuneSettingsView: View {
   var body: some View {
     Form {
       Section("Credentials") {
-        Toggle("Enabled", isOn: $settings.intuneIsEnabled)
-          .disabled(settings.snipeItIsEnabled == false)
-          .onChange(of: settings.intuneIsEnabled) { _, isOn in
-            Task {
-              if isOn {
-                await cacheManager.sync()
-              } else {
-                await cacheManager.removeMDMRecords(for: [.intune])
-              }
+        EnabledToggle(
+          isOn: $settings.intuneIsEnabled,
+          isConfigured: settings.configuredIntuneClient != nil
+        )
+        .disabled(settings.snipeItIsEnabled == false)
+        .onChange(of: settings.intuneIsEnabled) { _, isOn in
+          Task {
+            if isOn {
+              await cacheManager.sync()
+            } else {
+              await cacheManager.removeMDMRecords(for: [.intune])
             }
           }
+        }
 
         TextField("Tenant ID", text: $settings.intuneTenantId)
         TextField("Client ID", text: $settings.intuneClientId)
         SecureField("Client Secret", text: $settings.intuneClientSecret)
 
-        ConnectionTestRow {
-          try await testConnection()
-        }
+        ConnectionTestRow(test: settings.configuredIntuneClient?.testIntuneConnection)
 
         if settings.snipeItIsEnabled == false {
           Text("Enable Snipe-IT first; Intune only augments cached Snipe-IT devices.")
@@ -287,17 +270,6 @@ struct IntuneSettingsView: View {
     .formStyle(.grouped)
     .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
-  }
-
-  // MARK: - Private Helpers
-
-  private func testConnection() async throws {
-    let client = IntuneClient(
-      tenantId: settings.intuneTenantId,
-      clientId: settings.intuneClientId,
-      clientSecret: settings.intuneClientSecret
-    )
-    try await client.testIntuneConnection()
   }
 }
 
@@ -311,16 +283,17 @@ struct FreshserviceSettingsView: View {
   var body: some View {
     Form {
       Section("Credentials") {
-        Toggle("Enabled", isOn: $settings.freshserviceIsEnabled)
+        EnabledToggle(
+          isOn: $settings.freshserviceIsEnabled,
+          isConfigured: settings.configuredFreshserviceClient != nil
+        )
         TextField("Base URL", text: $settings.freshserviceBaseURL)
         #if os(iOS)
           .keyboardType(.URL)
         #endif
         SecureField("API Key", text: $settings.freshserviceAPIKey)
 
-        ConnectionTestRow(disabled: settings.freshserviceBaseURL.isEmpty) {
-          try await testConnection()
-        }
+        ConnectionTestRow(test: settings.configuredFreshserviceClient?.testFreshserviceConnection)
       }
 
       Section("Configuration") {
@@ -340,16 +313,6 @@ struct FreshserviceSettingsView: View {
     .verbatimEntry()
     .scrollDismissesKeyboard(.interactively)
   }
-
-  // MARK: - Private Helpers
-
-  private func testConnection() async throws {
-    guard let url = URL(string: settings.freshserviceBaseURL) else {
-      throw URLError(.badURL)
-    }
-    let client = FreshserviceClient(baseURL: url, apiKey: settings.freshserviceAPIKey)
-    try await client.testFreshserviceConnection()
-  }
 }
 
 struct CompnowSettingsView: View {
@@ -362,14 +325,15 @@ struct CompnowSettingsView: View {
   var body: some View {
     Form {
       Section("Credentials") {
-        Toggle("Enabled", isOn: $settings.compnowIsEnabled)
+        EnabledToggle(
+          isOn: $settings.compnowIsEnabled,
+          isConfigured: settings.configuredCompnowClient != nil
+        )
         TextField("Username", text: $settings.compnowUsername)
         SecureField("Password", text: $settings.compnowPassword)
         SecureField("API Key", text: $settings.compnowAPIKey)
 
-        ConnectionTestRow {
-          try await testConnection()
-        }
+        ConnectionTestRow(test: settings.configuredCompnowClient?.testCompnowConnection)
       }
       .verbatimEntry()
 
@@ -395,16 +359,18 @@ struct CompnowSettingsView: View {
     .formStyle(.grouped)
     .scrollDismissesKeyboard(.interactively)
   }
+}
 
-  // MARK: - Private Helpers
+// MARK: - EnabledToggle
 
-  private func testConnection() async throws {
-    let client = CompnowClient(
-      apiKey: settings.compnowAPIKey,
-      username: settings.compnowUsername,
-      password: settings.compnowPassword
-    )
-    try await client.testCompnowConnection()
+/// An integration's switch. It turns on only once the integration is configured, and always turns off.
+private struct EnabledToggle: View {
+  @Binding var isOn: Bool
+  let isConfigured: Bool
+
+  var body: some View {
+    Toggle("Enabled", isOn: $isOn)
+      .disabled(!isOn && !isConfigured)
   }
 }
 
@@ -413,8 +379,8 @@ struct CompnowSettingsView: View {
 private struct ConnectionTestRow: View {
   // MARK: - Properties
 
-  var disabled: Bool = false
-  let action: @MainActor () async throws -> Void
+  /// The integration's connection test, or nil while it is not configured.
+  let test: (@MainActor () async throws -> Void)?
 
   @State private var isTesting = false
   @State private var testResult: ConnectionTestResult?
@@ -425,7 +391,7 @@ private struct ConnectionTestRow: View {
   var body: some View {
     HStack {
       Button("Test Connection") { Task { await runTest() } }
-        .disabled(isTesting || disabled)
+        .disabled(isTesting || test == nil)
 
       if isTesting {
         ProgressView().controlSize(.small)
@@ -460,12 +426,13 @@ private struct ConnectionTestRow: View {
 
   @MainActor
   private func runTest() async {
+    guard let test else { return }
     isTesting = true
     testResult = nil
     showErrorPopover = false
     defer { isTesting = false }
     do {
-      try await action()
+      try await test()
       testResult = .success
     } catch {
       testResult = .failure(error.localizedDescription)
