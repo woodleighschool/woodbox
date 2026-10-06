@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.4.0](https://github.com/woodleighschool/woodbox/compare/2.3.1...2.4.0) (2026-08-25)
+## [2.4.0](https://github.com/woodleighschool/woodbox/compare/v2.3.1...v2.4.0) (2026-08-25)
 
 
 ### Features
@@ -31,7 +31,7 @@
 * post bootstrap cleanup ([0eaec59](https://github.com/woodleighschool/woodbox/commit/0eaec599a98c282c3fdc538ee8f1ec703ec56909))
 * **release-please:** sync configuration ([ec5dd3c](https://github.com/woodleighschool/woodbox/commit/ec5dd3cbabc88cc642630b71c5f35fe2d53bd9b9))
 
-## [2.3.1](https://github.com/woodleighschool/woodbox/compare/2.3.0...2.3.1) (2026-08-22)
+## [2.3.1](https://github.com/woodleighschool/woodbox/compare/2.3.0...v2.3.1) (2026-08-22)
 
 
 ### Bug Fixes
