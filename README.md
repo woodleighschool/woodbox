@@ -9,7 +9,7 @@ Native iOS and macOS tool for school IT repair intake, device restocking, sale p
 
 ## 🚀 Usage
 
-The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP. Extract it, open WoodBox, then choose a workflow and scan or search for a device. Restock and Sale accept one device or a working queue, using the camera on iOS and typed or USB scanner input on macOS. Service connections and workflow defaults live in Settings.
+The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP, and the iOS app comes through TestFlight. Extract the ZIP, open WoodBox, then choose a workflow and scan or search for a device. Restock and Sale accept one device or a working queue, using the camera on iOS and typed or USB scanner input on macOS. Service connections and workflow defaults live in Settings.
 
 ## 🧑‍💻 Development
 
