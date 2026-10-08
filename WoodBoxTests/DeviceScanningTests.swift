@@ -27,6 +27,13 @@ struct DeviceScanningTests {
     #expect(DeviceScan.serialCandidates(in: "Designed by Apple").isEmpty)
   }
 
+  @Test("a printed word is not reported as a missing device")
+  func unmatchedWords() {
+    #expect(!DeviceScan.text("CALIFORNIA").isReportableMiss)
+    #expect(DeviceScan.text("AB01234567").isReportableMiss)
+    #expect(DeviceScan.barcode("ASSET").isReportableMiss)
+  }
+
   @Test("repeats are throttled without delaying a different machine")
   func continuousObservations() {
     var session = DeviceScanSession()

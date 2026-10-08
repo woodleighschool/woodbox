@@ -4,6 +4,15 @@ nonisolated enum DeviceScan: Hashable {
   case barcode(String)
   case text(String)
 
+  /// Whether a scan that matches no device is worth reporting. A printed word such as "California"
+  /// is the length of a serial, so unmatched text counts only when it contains a digit.
+  var isReportableMiss: Bool {
+    switch self {
+    case .barcode: true
+    case let .text(value): value.contains(where: \.isNumber)
+    }
+  }
+
   static func serialCandidates(in transcript: String) -> [String] {
     transcript.uppercased().split(separator: /\W+/).map(String.init).filter {
       ($0.count == 10 || $0.count == 12)

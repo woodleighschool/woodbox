@@ -102,9 +102,8 @@ import SwiftUI
     private func handleCandidates(_ scans: [DeviceScan]) {
       guard let lookup else { return }
       // Prefer a known identifier over unrelated words printed beside the serial.
-      guard let scan = scans.first(where: { !lookup.matches($0).isEmpty }) ?? scans.first,
-            session.accepts(scan)
-      else { return }
+      let known = scans.first { !lookup.matches($0).isEmpty }
+      guard let scan = known ?? scans.first(where: \.isReportableMiss), session.accepts(scan) else { return }
       let matches = lookup.matches(scan)
       switch matches.count {
       case 0:
