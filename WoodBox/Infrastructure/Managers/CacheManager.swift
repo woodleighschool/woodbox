@@ -256,6 +256,13 @@ final class CacheManager {
       device.mdmRecords = records
     }
 
+    // Restock and Sale lists show their own copy of a device's details, which follows the cache.
+    for item in try modelContext.fetch(FetchDescriptor<DeviceProcessingItem>()) {
+      if let device = deviceMap[item.serial] {
+        item.update(from: device)
+      }
+    }
+
     let activeSerials = Set(snapshot.assets.map(\.serial))
     for device in existingDevices where !activeSerials.contains(device.serial) {
       modelContext.delete(device)

@@ -91,6 +91,14 @@ final class DeviceProcessingItem {
 }
 
 extension DeviceProcessingItem {
+  /// Takes on what the cache knows about the device. An item keeps its own copy of these details
+  /// so that a device can leave the cache without leaving the list.
+  func update(from device: Device) {
+    assetTag = device.assetTag
+    deviceName = device.name
+    deviceModel = device.model
+  }
+
   var profile: DeviceProcessingProfile {
     get { DeviceProcessingProfile(rawValue: profileRawValue) ?? .restock }
     set {

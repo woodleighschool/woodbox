@@ -8,8 +8,7 @@ import Testing
 struct CacheManagerTests {
   @Test("overlapping refreshes both wait until one snapshot has been saved")
   func joinsRefreshThroughPersistence() async throws {
-    let schema = Schema([Device.self, MDMRecord.self, SnipeItUser.self, SnipeItStatus.self])
-    let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let container = try makeContainer()
     let context = ModelContext(container)
     context.insert(Device(serial: "OLD1234567", assetTag: "OLD", model: "Old Laptop"))
     try context.save()
@@ -51,8 +50,7 @@ struct CacheManagerTests {
 
   @Test("a failed fetch retains the cache and allows another refresh")
   func retriesAfterFailure() async throws {
-    let schema = Schema([Device.self, MDMRecord.self, SnipeItUser.self, SnipeItStatus.self])
-    let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let container = try makeContainer()
     let context = ModelContext(container)
     context.insert(Device(serial: "OLD1234567", assetTag: "OLD", model: "Old Laptop"))
     try context.save()
@@ -76,10 +74,39 @@ struct CacheManagerTests {
     #expect(try context.fetchCount(FetchDescriptor<Device>()) == 0)
   }
 
+  @Test("a refresh updates the details a list holds for a device, and keeps them once the device is gone")
+  func updatesListedDevices() async throws {
+    let container = try makeContainer()
+    let context = ModelContext(container)
+    let renamed = Device(serial: "TEST123456", assetTag: "OLD-7", model: "Old Laptop")
+    renamed.name = "Old Name"
+    let removed = Device(serial: "GONE123456", assetTag: "GONE-1", model: "Gone Laptop")
+    removed.name = "Gone Name"
+    context.insert(renamed)
+    context.insert(removed)
+    context.insert(DeviceProcessingItem(.restock(renamed)))
+    context.insert(DeviceProcessingItem(.restock(removed)))
+    try context.save()
+
+    let suite = "CacheManagerTests.\(UUID())"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let asset = try JSONDecoder().decode(SnipeItAssetResponse.self, from: Data(#"{"id":7,"asset_tag":"TEST-7","serial":"TEST123456","model":{"name":"Test Laptop"},"status_label":{"id":2,"name":"Shelf"}}"#.utf8))
+    let manager = CacheManager(modelContext: context, defaults: defaults) {
+      CacheManager.Snapshot(assets: [asset])
+    }
+    await manager.sync()
+
+    let items = try ModelContext(container).fetch(FetchDescriptor<DeviceProcessingItem>(sortBy: [SortDescriptor(\.serial)]))
+    #expect(items.map(\.serial) == ["GONE123456", "TEST123456"])
+    #expect(items.map(\.deviceName) == ["Gone Name", nil])
+    #expect(items.map(\.assetTag) == ["GONE-1", "TEST-7"])
+    #expect(items.map(\.deviceModel) == ["Gone Laptop", "Test Laptop"])
+  }
+
   @Test("post-mutation refresh fetches again after any older snapshot")
   func refreshesAfterChanges() async throws {
-    let schema = Schema([Device.self, MDMRecord.self, SnipeItUser.self, SnipeItStatus.self])
-    let container = try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let container = try makeContainer()
     let suite = "CacheManagerTests.\(UUID())"
     let defaults = try #require(UserDefaults(suiteName: suite))
     defer { defaults.removePersistentDomain(forName: suite) }
@@ -107,6 +134,14 @@ struct CacheManagerTests {
     await afterChanges.value
     #expect(completed)
   }
+}
+
+@MainActor
+private func makeContainer() throws -> ModelContainer {
+  let schema = Schema([
+    Device.self, MDMRecord.self, SnipeItUser.self, SnipeItStatus.self, DeviceProcessingItem.self,
+  ])
+  return try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
 }
 
 @MainActor
