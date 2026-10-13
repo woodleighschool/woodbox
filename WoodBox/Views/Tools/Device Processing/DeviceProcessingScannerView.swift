@@ -126,6 +126,13 @@ struct DeviceProcessingCaptureView: View {
               Button("Scan", systemImage: "chevron.backward", action: showScanner)
             }
           }
+          #if os(macOS)
+            ToolbarItem(placement: .cancellationAction) {
+              Button("Cancel") {
+                dismiss()
+              }
+            }
+          #endif
           ToolbarItem(placement: .confirmationAction) {
             Button("Save") {
               save(device)

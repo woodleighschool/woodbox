@@ -23,6 +23,9 @@ struct DeviceProcessingApplyView: View {
 
   @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
+  #if os(macOS)
+    @Environment(\.dismiss) private var dismiss
+  #endif
 
   let items: [DeviceProcessingItem]
   let application: DeviceProcessingApplication
@@ -61,6 +64,14 @@ struct DeviceProcessingApplyView: View {
         .navigationBarTitleDisplayMode(.inline)
       #endif
         .toolbar {
+          #if os(macOS)
+            ToolbarItem(placement: .cancellationAction) {
+              Button(runState == .finished ? "Done" : "Cancel") {
+                dismiss()
+              }
+              .disabled(runState == .running)
+            }
+          #endif
           ToolbarItem(placement: .confirmationAction) {
             if runState == .running {
               ProgressView()
