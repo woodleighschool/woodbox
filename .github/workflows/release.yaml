@@ -48,7 +48,7 @@ jobs:
           p12-password: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
 
       - name: Download Developer ID provisioning profile
-        uses: apple-actions/download-provisioning-profiles@2126b5f86a0e2863cbf4d2d312112b22b943a594 # v6.1.0
+        uses: apple-actions/download-provisioning-profiles@230860ab5f632551a5f9a5e1d98a774485463888 # v7.0.0
         with:
           bundle-id: au.edu.vic.woodleigh.WoodBox
           profile-type: MAC_APP_DIRECT
