@@ -40,6 +40,15 @@ struct HTTPClient: Sendable {
     integration: String = "HTTP"
   ) async throws -> T {
     let data = try await data(for: request, action: action, integration: integration)
+    return try decode(type, from: data, action: action, integration: integration)
+  }
+
+  func decode<T: Decodable>(
+    _ type: T.Type,
+    from data: Data,
+    action: String,
+    integration: String
+  ) throws -> T {
     do {
       return try JSONDecoder().decode(type, from: data)
     } catch let decodingError as DecodingError {

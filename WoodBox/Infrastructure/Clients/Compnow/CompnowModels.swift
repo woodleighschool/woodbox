@@ -23,10 +23,16 @@ struct CompnowTicketCreateRequest: Encodable {
 
 /// Response
 struct CompnowTicketCreateResponse: Decodable {
-  let message: String
   let ticket: CompnowTicket
 }
 
 struct CompnowTicket: Decodable {
   let ticketId: String
+}
+
+// MARK: Failure
+
+/// Compnow returns failures, rejected credentials included, inside a successful HTTP response.
+struct CompnowFailureResponse: Decodable {
+  let messages: [String]
 }
