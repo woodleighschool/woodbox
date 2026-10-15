@@ -48,5 +48,7 @@
 
 - The app supports iOS and macOS from one Xcode project. Keep shared workflows platform-neutral and platform-specific behaviour at the edge.
 - Repair, restock, sale preparation, deduplication, and device administration remain distinct user workflows over shared service clients.
+- Snipe-IT assets are the persistent service cache. Dedupe owns live service reads and includes devices without a cached asset. Working queues are user state, not service caches.
+- Shared device labels keep model, name, serial, and asset tag in their own roles. Missing values never substitute a different field. Tools share refresh, loading, and operation feedback.
 - Restock and Sale share device capture and processing primitives. They apply a user-selected Snipe-IT status rather than defining status semantics in the app.
 - The Xcode project and release workflows own build, signing, version, and distribution contracts.

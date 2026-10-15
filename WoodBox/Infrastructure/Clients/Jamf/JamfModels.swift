@@ -20,6 +20,7 @@ struct JamfComputerGeneral: Decodable {
 
 struct JamfComputerHardware: Decodable {
   let serialNumber: String
+  let model: String?
 }
 
 // MARK: Mobile Devices
@@ -47,4 +48,5 @@ struct JamfMobileDeviceGeneral: Decodable {
 
 struct JamfMobileDeviceHardware: Decodable {
   let serialNumber: String
+  let model: String?
 }

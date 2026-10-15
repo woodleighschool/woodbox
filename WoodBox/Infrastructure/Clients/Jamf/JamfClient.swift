@@ -34,13 +34,14 @@ struct JamfClient {
     _ = try await fetchJamfComputersPage(page: 0, pageSize: 1)
   }
 
-  func fetchJamfComputers() async throws -> [JamfComputer] {
+  func fetchJamfComputers(serial: String? = nil) async throws -> [JamfComputer] {
     var allComputers: [JamfComputer] = []
     var page = 0
     let pageSize = 500
 
     while true {
-      let response = try await fetchJamfComputersPage(page: page, pageSize: pageSize)
+      try Task.checkCancellation()
+      let response = try await fetchJamfComputersPage(page: page, pageSize: pageSize, serial: serial)
       allComputers.append(contentsOf: response.results)
 
       if response.results.count < pageSize {
@@ -52,13 +53,14 @@ struct JamfClient {
     return allComputers
   }
 
-  func fetchJamfMobileDevices() async throws -> [JamfMobileDevice] {
+  func fetchJamfMobileDevices(serial: String? = nil) async throws -> [JamfMobileDevice] {
     var allDevices: [JamfMobileDevice] = []
     var page = 0
     let pageSize = 500
 
     while true {
-      let response = try await fetchJamfMobileDevicesPage(page: page, pageSize: pageSize)
+      try Task.checkCancellation()
+      let response = try await fetchJamfMobileDevicesPage(page: page, pageSize: pageSize, serial: serial)
       allDevices.append(contentsOf: response.results)
 
       if response.results.count < pageSize {
@@ -125,7 +127,7 @@ struct JamfClient {
     return [.timedOut, .networkConnectionLost, .badServerResponse].contains(error.code)
   }
 
-  private func fetchJamfComputersPage(page: Int, pageSize: Int) async throws
+  private func fetchJamfComputersPage(page: Int, pageSize: Int, serial: String? = nil) async throws
     -> JamfComputersResponse
   {
     let url = baseURL.appending(
@@ -135,8 +137,9 @@ struct JamfClient {
         URLQueryItem(name: "section", value: "HARDWARE"),
         URLQueryItem(name: "page", value: "\(page)"),
         URLQueryItem(name: "page-size", value: "\(pageSize)"),
-        URLQueryItem(name: "sort", value: "general.name:asc"),
-      ]
+        URLQueryItem(name: "sort", value: "id:asc"),
+        serialFilter(serial, field: "hardware.serialNumber"),
+      ].compactMap(\.self)
     )
 
     let request = try await authorizedRequest(url: url)
@@ -150,7 +153,8 @@ struct JamfClient {
 
   private func fetchJamfMobileDevicesPage(
     page: Int,
-    pageSize: Int
+    pageSize: Int,
+    serial: String? = nil
   ) async throws -> JamfMobileDevicesResponse {
     let url = baseURL.appending(
       path: "api/v2/mobile-devices/detail",
@@ -159,8 +163,9 @@ struct JamfClient {
         URLQueryItem(name: "section", value: "HARDWARE"),
         URLQueryItem(name: "page", value: "\(page)"),
         URLQueryItem(name: "page-size", value: "\(pageSize)"),
-        URLQueryItem(name: "sort", value: "displayName:asc"),
-      ]
+        URLQueryItem(name: "sort", value: "mobileDeviceId:asc"),
+        serialFilter(serial, field: "serialNumber"),
+      ].compactMap(\.self)
     )
 
     let request = try await authorizedRequest(url: url)
@@ -170,6 +175,13 @@ struct JamfClient {
       action: "fetch mobile devices",
       integration: "Jamf"
     )
+  }
+
+  private func serialFilter(_ serial: String?, field: String) -> URLQueryItem? {
+    guard let serial else { return nil }
+    let escaped = serial.replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+    return URLQueryItem(name: "filter", value: "\(field)==\"\(escaped)\"")
   }
 
   private func authorizedRequest(url: URL, method: String = "GET") async throws -> URLRequest {

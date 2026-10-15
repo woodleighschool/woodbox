@@ -3,7 +3,6 @@ import SwiftUI
 
 struct RepairIntakeView: View {
   @Environment(ModelData.self) private var modelData
-  @Environment(\.modelContext) private var modelContext
 
   @Bindable var deviceSelection: DeviceSelectionState
 
@@ -25,15 +24,6 @@ struct RepairIntakeView: View {
 
   private var settings: AppSettings {
     modelData.settings
-  }
-
-  private var matchingSnipeItUser: SnipeItUser? {
-    guard let email = form.endUserEmail.nilIfEmpty else { return nil }
-    var descriptor = FetchDescriptor<SnipeItUser>(
-      predicate: #Predicate<SnipeItUser> { $0.email == email }
-    )
-    descriptor.fetchLimit = 1
-    return try? modelContext.fetch(descriptor).first
   }
 
   private var hasSelectedOutcome: Bool {
@@ -58,7 +48,7 @@ struct RepairIntakeView: View {
     }
     .formStyle(.grouped)
     .disabled(isSubmitting)
-    .cacheRefreshable()
+    .assetRefreshable()
     .deviceSearch(selection: deviceSelection)
     .scrollDismissesKeyboard(.interactively)
     .toolbar {
@@ -188,7 +178,7 @@ struct RepairIntakeView: View {
     defer { isSubmitting = false }
 
     do {
-      let input = try makeSubmissionInput(for: device)
+      let input = try await makeSubmissionInput(for: device)
       spare = input.spare
       let coordinator = RepairCoordinator(service: LiveRepairService(settings: settings))
       try await coordinator.submit(input, progress: progress)
@@ -210,7 +200,7 @@ struct RepairIntakeView: View {
     }
   }
 
-  private func makeSubmissionInput(for device: Device) throws -> RepairSubmissionInput {
+  private func makeSubmissionInput(for device: Device) async throws -> RepairSubmissionInput {
     var spare: RepairSpareSnapshot?
     if settings.snipeItIsEnabled, form.checkoutSpare, let selectedSpare = form.selectedSpare {
       guard let assetId = selectedSpare.snipeItId, let statusId = selectedSpare.statusId else {
@@ -229,6 +219,17 @@ struct RepairIntakeView: View {
       )
     }
 
+    var userId: Int?
+    if spare != nil {
+      guard let client = settings.snipeItClient else {
+        throw IntegrationError(action: "find user", integration: "Snipe-IT", message: "The integration is not enabled or configured")
+      }
+      let users = try await client.fetchSnipeItUsers(matching: form.endUserEmail.trimmingCharacters(in: .whitespacesAndNewlines))
+      guard users.count == 1 else {
+        throw IntegrationError(action: "find user", integration: "Snipe-IT", message: "Choose an email that matches exactly one user")
+      }
+      userId = users.first?.id
+    }
     return RepairSubmissionInput(
       device: RepairDeviceSnapshot(serial: device.serial, model: device.model),
       endUserName: form.endUserName,
@@ -238,7 +239,7 @@ struct RepairIntakeView: View {
       createCompnowTicket: settings.compnowIsEnabled && form.createCompnowTicket,
       createFreshserviceTicket: settings.freshserviceIsEnabled && form.createFreshserviceTicket,
       spare: spare,
-      snipeItUserId: matchingSnipeItUser?.snipeItId
+      snipeItUserId: userId
     )
   }
 
@@ -295,7 +296,9 @@ private struct SpareDevicePicker: View {
     Picker("Spare Device", selection: $selection) {
       Text("None").tag(nil as Device?)
       ForEach(spareDevices) { device in
-        Text(device.name ?? device.serial).tag(device as Device?)
+        if let name = device.name {
+          Text(name).tag(device as Device?)
+        }
       }
     }
     .disabled(spareDevices.isEmpty)

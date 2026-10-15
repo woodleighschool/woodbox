@@ -1,29 +1,6 @@
 import SwiftData
 import SwiftUI
 
-struct DeviceSearchResultLabel: View {
-  let device: Device
-
-  var body: some View {
-    HStack(spacing: 10) {
-      Image(systemName: device.symbolName)
-        .resizable()
-        .scaledToFit()
-        .frame(width: 24, height: 24)
-
-      VStack(alignment: .leading, spacing: 3) {
-        DeviceNameText(name: device.name)
-        Group {
-          Text(device.model)
-          DeviceIdentifiersRow(assetTag: device.assetTag, serial: device.serial)
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-      }
-    }
-  }
-}
-
 #if os(iOS)
   struct DeviceProcessingQueueRow: View {
     @Environment(\.modelContext) private var modelContext
@@ -62,26 +39,44 @@ struct DeviceSearchResultLabel: View {
     let device: Device?
 
     var body: some View {
-      DeviceIdentityLabel(
-        device: device,
-        name: item.deviceName,
-        model: item.deviceModel,
-        assetTag: item.assetTag,
-        serial: item.serial
-      ) {
-        if let notes = item.conditionNotes.nilIfEmpty {
-          Text(notes)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
+      HStack(spacing: 8) {
+        DeviceIdentityLabel(
+          device: device,
+          name: item.deviceName,
+          model: item.deviceModel,
+          assetTag: item.assetTag,
+          serial: item.serial
+        ) {
+          if let notes = item.conditionNotes.nilIfEmpty {
+            Text(notes)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          }
+        }
+
+        if let grade = item.grade {
+          Image(systemName: grade.symbolName)
+            .font(.title3)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(grade.color)
         }
       }
-      .padding(.vertical, 2)
-      .badge(grade)
+    }
+  }
+
+  private extension SaleGrade {
+    var symbolName: String {
+      "\(rawValue.lowercased()).circle.fill"
     }
 
-    private var grade: Text? {
-      item.grade.map { Text($0.rawValue).accessibilityLabel("Grade \($0.rawValue)") }
+    var color: Color {
+      switch self {
+      case .a: .green
+      case .b: .blue
+      case .c: .orange
+      case .d: .red
+      }
     }
   }
 #endif
@@ -190,12 +185,7 @@ struct SaleConditionForm: View {
     var body: some View {
       Table(items) {
         TableColumn("Device") { item in
-          VStack(alignment: .leading, spacing: 2) {
-            Text(item.deviceName.nilIfEmpty ?? item.assetTag)
-            Text(item.deviceModel)
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
+          DeviceTitle(model: item.deviceModel, name: item.deviceName)
         }
         .width(min: 170, ideal: 220)
 

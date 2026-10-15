@@ -5,7 +5,7 @@ import SwiftData
 final class Device {
   // MARK: - Properties
 
-  @Attribute(.unique) var assetTag: String
+  var assetTag: String
   var serial: String
 
   var name: String?
@@ -14,7 +14,7 @@ final class Device {
 
   var status: String?
   var statusId: Int?
-  var snipeItId: Int?
+  @Attribute(.unique) var snipeItId: Int?
 
   var assignedUserName: String?
   var assignedUserEmail: String?
@@ -23,90 +23,18 @@ final class Device {
   var storage: String?
   var warrantyExpires: Date?
 
-  @Relationship(deleteRule: .cascade) var mdmRecords: [MDMRecord]
-
   // MARK: - Init
 
   init(serial: String, assetTag: String, model: String) {
     self.serial = serial
     self.assetTag = assetTag
     self.model = model
-    mdmRecords = []
   }
-}
-
-@Model
-final class MDMRecord {
-  @Attribute(.unique) var id: String
-  var provider: MDMProvider
-  var deviceId: String
-  var deviceName: String?
-  var lastCheckIn: Date?
-  var jamfDeviceType: JamfDeviceType?
-
-  @Relationship(inverse: \Device.mdmRecords) var device: Device?
-
-  init(
-    provider: MDMProvider,
-    deviceId: String,
-    deviceName: String?,
-    lastCheckIn: Date?,
-    jamfDeviceType: JamfDeviceType?,
-    device: Device? = nil
-  ) {
-    id = Self.makeId(provider: provider, jamfDeviceType: jamfDeviceType, deviceId: deviceId)
-    self.provider = provider
-    self.deviceId = deviceId
-    self.deviceName = deviceName
-    self.lastCheckIn = lastCheckIn
-    self.jamfDeviceType = jamfDeviceType
-    self.device = device
-  }
-
-  /// Jamf IDs can sometimes overlap between mobile and computer records.
-  private static func makeId(
-    provider: MDMProvider, jamfDeviceType: JamfDeviceType?, deviceId: String
-  ) -> String {
-    "\(provider.rawValue)-\(jamfDeviceType?.rawValue ?? "na")-\(deviceId)"
-  }
-}
-
-enum MDMProvider: String, Codable, CaseIterable, Identifiable, Sendable {
-  case jamf = "Jamf"
-  case intune = "Intune"
-
-  var id: String {
-    rawValue
-  }
-
-  var processingOrder: Int {
-    Self.allCases.firstIndex(of: self) ?? 0
-  }
-}
-
-enum JamfDeviceType: String, Codable, Sendable {
-  case computer = "Computer"
-  case mobile = "Mobile"
 }
 
 // MARK: - Extensions
 
 extension Device {
-  var mdmProviderNames: [String] {
-    var providers: [String] = []
-    if mdmRecords.contains(where: { $0.provider == .jamf }) {
-      providers.append(MDMProvider.jamf.rawValue)
-    }
-    if mdmRecords.contains(where: { $0.provider == .intune }) {
-      providers.append(MDMProvider.intune.rawValue)
-    }
-    return providers
-  }
-
-  var symbolName: String {
-    Self.symbolName(for: model)
-  }
-
   static func symbolName(for model: String) -> String {
     let rules: [(String, String)] = [
       ("MacBook", "laptopcomputer"),
@@ -121,4 +49,32 @@ extension Device {
     ]
     return rules.first(where: { model.contains($0.0) })?.1 ?? "questionmark"
   }
+}
+
+extension Device {
+  @MainActor
+  func update(from asset: SnipeItAssetResponse) {
+    snipeItId = asset.id
+    serial = asset.serial
+    assetTag = asset.assetTag
+    name = asset.name.nilIfEmpty
+    model = asset.model.name
+    category = asset.category?.name.nilIfEmpty
+    status = asset.statusLabel?.name.nilIfEmpty
+    statusId = asset.statusLabel?.id
+    notes = asset.notes.nilIfEmpty
+    ram = asset[customField: "RAM"]
+    storage = asset[customField: "Storage"]
+    assignedUserName = asset.assignedTo?.name.nilIfEmpty
+    assignedUserEmail = asset.assignedTo?.email.nilIfEmpty
+    warrantyExpires = asset.warrantyExpires?.date.flatMap { Self.dateOnlyFormatter.date(from: $0) }
+  }
+
+  private static let dateOnlyFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter
+  }()
 }

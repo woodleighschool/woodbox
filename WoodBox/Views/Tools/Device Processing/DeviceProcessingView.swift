@@ -19,8 +19,9 @@ struct DeviceProcessingView: View {
 
   @Query private var items: [DeviceProcessingItem]
 
-  @Query(sort: [SortDescriptor(\SnipeItStatus.name)])
-  private var statuses: [SnipeItStatus]
+  private var statuses: [SnipeItStatusResponse] {
+    modelData.snipeReferenceData.statuses
+  }
 
   let profile: DeviceProcessingProfile
 
@@ -45,13 +46,31 @@ struct DeviceProcessingView: View {
     )
   }
 
-  private var targetStatus: SnipeItStatus? {
+  private var targetStatus: SnipeItStatusResponse? {
     guard let selectedStatusId else { return nil }
-    return statuses.first { $0.snipeItId == selectedStatusId }
+    return statuses.first { $0.id == selectedStatusId }
   }
 
   private var searchResults: [Device] {
     modelContext.searchDevices(matching: searchQuery)
+  }
+
+  private var refreshState: LoadState {
+    let reference = modelData.snipeReferenceData.loadState
+    if reference.isLoading || modelData.assetStore.isSyncing {
+      return .loading
+    }
+    if case let .failed(message, _) = modelData.assetStore.status {
+      return .failed(message)
+    }
+    return reference
+  }
+
+  private func refresh(userInitiated: Bool) async -> LoadState {
+    async let assets: Void = userInitiated ? modelData.assetStore.sync() : modelData.assetStore.syncIfNeeded()
+    async let statuses: Void = modelData.snipeReferenceData.refresh()
+    _ = await (assets, statuses)
+    return refreshState
   }
 
   private var isApplyDisabled: Bool {
@@ -61,6 +80,7 @@ struct DeviceProcessingView: View {
 
   var body: some View {
     platformContent
+      .toolRefreshable(state: refreshState, failurePolicy: modelData.snipeRefreshFailures, disabled: !modelData.settings.snipeItIsEnabled, refresh: refresh)
       .searchable(text: $searchQuery, prompt: "Add a Device")
       .searchSuggestions {
         ForEach(searchResults) { device in
@@ -119,7 +139,7 @@ struct DeviceProcessingView: View {
           #endif
         }
       }
-      .onChange(of: statuses.map(\.snipeItId), initial: true) { _, _ in
+      .onChange(of: statuses.map(\.id), initial: true) { _, _ in
         restoreStatusSelection()
       }
       .onChange(of: selectedStatusId) { _, newValue in
@@ -162,7 +182,6 @@ struct DeviceProcessingView: View {
         }
       }
       .navigationTitle(profile.title)
-      .cacheRefreshable()
       .scrollDismissesKeyboard(.interactively)
       .toolbar { iOSToolbar }
     }
@@ -195,7 +214,7 @@ struct DeviceProcessingView: View {
       }
 
       ToolbarItem(placement: .confirmationAction) {
-        Button("Apply", action: presentApplication)
+        Button("Process", action: presentApplication)
           .disabled(isApplyDisabled)
           .buttonStyle(.borderedProminent)
       }
@@ -261,7 +280,7 @@ struct DeviceProcessingView: View {
         }
         .disabled(items.isEmpty)
 
-        Button("Apply", systemImage: "checkmark", action: presentApplication)
+        Button("Process", systemImage: "checkmark", action: presentApplication)
           .disabled(isApplyDisabled)
           .keyboardShortcut(.return, modifiers: [.command])
       }
@@ -271,7 +290,7 @@ struct DeviceProcessingView: View {
   private func restoreStatusSelection() {
     guard !statuses.isEmpty else { return }
     let remembered = modelData.settings.lastTargetStatusId(for: profile)
-    selectedStatusId = statuses.contains { $0.snipeItId == remembered } ? remembered : nil
+    selectedStatusId = statuses.contains { $0.id == remembered } ? remembered : nil
   }
 
   private var deviceCount: Text {
@@ -361,7 +380,7 @@ struct DeviceProcessingView: View {
     guard let targetStatus else { return }
     presentedSheet = .application(
       DeviceProcessingApplication(
-        statusId: targetStatus.snipeItId,
+        statusId: targetStatus.id,
         statusName: targetStatus.name
       )
     )

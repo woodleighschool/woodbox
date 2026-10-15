@@ -3,17 +3,7 @@ import SwiftUI
 
 @main
 struct WoodBoxApp: App {
-  private let modelTypes: [any PersistentModel.Type] = {
-    var modelTypes: [any PersistentModel.Type] = [
-      Device.self,
-      MDMRecord.self,
-      SnipeItStatus.self,
-      SnipeItUser.self,
-      DeviceProcessingItem.self,
-    ]
-
-    return modelTypes
-  }()
+  private let modelTypes: [any PersistentModel.Type] = [Device.self, DeviceProcessingItem.self]
 
   private let container: ModelContainer
   private let modelData: ModelData
@@ -22,8 +12,13 @@ struct WoodBoxApp: App {
 
   init() {
     let schema = Schema(modelTypes)
-    container = try! ModelContainer(for: schema)
-    modelData = ModelData(modelContext: ModelContext(container))
+    let isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+      || NSClassFromString("XCTestCase") != nil
+    container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: isTesting))
+    let settings = isTesting
+      ? AppSettings(defaults: UserDefaults(suiteName: "WoodBox.Tests")!, usesKeychain: false)
+      : .shared
+    modelData = ModelData(modelContext: ModelContext(container), settings: settings)
   }
 
   // MARK: - Body

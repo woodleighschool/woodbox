@@ -5,11 +5,13 @@
 ![macOS and iOS 26+](https://img.shields.io/badge/macOS%20%7C%20iOS-26%2B-000000?logo=apple&logoColor=white)
 [![License](https://img.shields.io/github/license/woodleighschool/WoodBox)](https://github.com/woodleighschool/WoodBox/blob/main/LICENSE)
 
-Native iOS and macOS tool for school IT repair intake, device restocking, sale preparation, and device administration.
+Native iOS and macOS tool for repair intake, device restocking, sale preparation, and device administration.
 
 ## 🚀 Usage
 
 The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP, and the iOS app comes through TestFlight. Extract the ZIP, open WoodBox, then choose a workflow and scan or search for a device. Restock and Sale accept one device or a working queue, using the camera on iOS and typed or USB scanner input on macOS. Service connections and workflow defaults live in Settings.
+
+Snipe-IT assets are cached for search and device details. Dedupe loads current Jamf and Intune records when opened. It includes devices without a matching asset and works without a Snipe-IT connection. Refresh updates the current tool. Restock and Sale verify the asset in Snipe-IT before removing current MDM records and applying the selected status.
 
 ## 🧑‍💻 Development
 

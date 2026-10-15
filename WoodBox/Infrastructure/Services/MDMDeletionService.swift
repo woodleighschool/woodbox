@@ -1,5 +1,4 @@
 import Foundation
-import SwiftData
 
 enum MDMDeletionService {
   struct Request: Equatable, Sendable {
@@ -23,27 +22,8 @@ enum MDMDeletionService {
     }
   }
 
-  struct LocalRecord: Equatable, Sendable {
-    let provider: MDMProvider
-    let deviceId: String
-    let deviceName: String?
-    let lastCheckIn: Date?
-    let jamfDeviceType: JamfDeviceType?
-
-    @MainActor
-    init(record: MDMRecord) {
-      provider = record.provider
-      deviceId = record.deviceId
-      deviceName = record.deviceName
-      lastCheckIn = record.lastCheckIn
-      jamfDeviceType = record.jamfDeviceType
-    }
-  }
-
   @MainActor
-  static func delete(_ request: Request) async throws {
-    let settings = AppSettings.shared
-
+  static func delete(_ request: Request, settings: AppSettings = .shared) async throws {
     switch request.provider {
     case .jamf:
       guard let jamfClient = settings.jamfClient else {
@@ -73,43 +53,5 @@ enum MDMDeletionService {
         return
       }
     }
-  }
-
-  @MainActor
-  static func removeLocally(
-    _ request: Request,
-    from device: Device,
-    modelContext: ModelContext
-  ) throws {
-    guard let record = device.mdmRecords.first(where: { Request(record: $0) == request }) else { return }
-    device.mdmRecords.removeAll { $0.id == record.id }
-    modelContext.delete(record)
-    try modelContext.save()
-  }
-
-  @MainActor
-  @discardableResult
-  static func restoreLocally(
-    _ record: LocalRecord,
-    to device: Device,
-    modelContext: ModelContext
-  ) throws -> MDMRecord {
-    if let existing = device.mdmRecords.first(where: {
-      $0.provider == record.provider && $0.deviceId == record.deviceId
-        && $0.jamfDeviceType == record.jamfDeviceType
-    }) {
-      return existing
-    }
-    let restored = MDMRecord(
-      provider: record.provider,
-      deviceId: record.deviceId,
-      deviceName: record.deviceName,
-      lastCheckIn: record.lastCheckIn,
-      jamfDeviceType: record.jamfDeviceType
-    )
-    device.mdmRecords.append(restored)
-    modelContext.insert(restored)
-    try modelContext.save()
-    return restored
   }
 }

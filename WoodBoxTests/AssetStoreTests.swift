@@ -5,7 +5,7 @@ import Testing
 
 @Suite("Cache refresh completion")
 @MainActor
-struct CacheManagerTests {
+struct AssetStoreTests {
   @Test("overlapping refreshes both wait until one snapshot has been saved")
   func joinsRefreshThroughPersistence() async throws {
     let container = try makeContainer()
@@ -13,11 +13,11 @@ struct CacheManagerTests {
     context.insert(Device(serial: "OLD1234567", assetTag: "OLD", model: "Old Laptop"))
     try context.save()
 
-    let suite = "CacheManagerTests.\(UUID())"
+    let suite = "AssetStoreTests.\(UUID())"
     let defaults = try #require(UserDefaults(suiteName: suite))
     defer { defaults.removePersistentDomain(forName: suite) }
     let loader = DeferredSnapshot()
-    let manager = CacheManager(modelContext: context, defaults: defaults, fetchSnapshot: loader.load)
+    let manager = AssetStore(modelContext: context, defaults: defaults, fetchSnapshot: loader.load)
     var completed = 0
     let first = Task { await manager.sync(); completed += 1 }
     var started = loader.started.makeAsyncIterator()
@@ -36,7 +36,7 @@ struct CacheManagerTests {
     #expect(loader.calls == 1)
 
     let asset = try JSONDecoder().decode(SnipeItAssetResponse.self, from: Data(#"{"id":7,"asset_tag":"TEST-7","serial":"TEST123456","model":{"name":"Test Laptop"},"status_label":{"id":2,"name":"Shelf"}}"#.utf8))
-    loader.finish(.success(CacheManager.Snapshot(assets: [asset])))
+    loader.finish(.success(AssetStore.Snapshot(assets: [asset])))
     await first.value
     await second.value
 
@@ -54,16 +54,16 @@ struct CacheManagerTests {
     let context = ModelContext(container)
     context.insert(Device(serial: "OLD1234567", assetTag: "OLD", model: "Old Laptop"))
     try context.save()
-    let suite = "CacheManagerTests.\(UUID())"
+    let suite = "AssetStoreTests.\(UUID())"
     let defaults = try #require(UserDefaults(suiteName: suite))
     defer { defaults.removePersistentDomain(forName: suite) }
     var calls = 0
-    let manager = CacheManager(modelContext: context, defaults: defaults) {
+    let manager = AssetStore(modelContext: context, defaults: defaults) {
       calls += 1
       if calls == 1 {
         throw URLError(.timedOut)
       }
-      return CacheManager.Snapshot()
+      return AssetStore.Snapshot()
     }
     await manager.sync()
     #expect(!manager.isSyncing)
@@ -80,6 +80,7 @@ struct CacheManagerTests {
     let context = ModelContext(container)
     let renamed = Device(serial: "TEST123456", assetTag: "OLD-7", model: "Old Laptop")
     renamed.name = "Old Name"
+    renamed.snipeItId = 7
     let removed = Device(serial: "GONE123456", assetTag: "GONE-1", model: "Gone Laptop")
     removed.name = "Gone Name"
     context.insert(renamed)
@@ -88,12 +89,12 @@ struct CacheManagerTests {
     context.insert(DeviceProcessingItem(.restock(removed)))
     try context.save()
 
-    let suite = "CacheManagerTests.\(UUID())"
+    let suite = "AssetStoreTests.\(UUID())"
     let defaults = try #require(UserDefaults(suiteName: suite))
     defer { defaults.removePersistentDomain(forName: suite) }
     let asset = try JSONDecoder().decode(SnipeItAssetResponse.self, from: Data(#"{"id":7,"asset_tag":"TEST-7","serial":"TEST123456","model":{"name":"Test Laptop"},"status_label":{"id":2,"name":"Shelf"}}"#.utf8))
-    let manager = CacheManager(modelContext: context, defaults: defaults) {
-      CacheManager.Snapshot(assets: [asset])
+    let manager = AssetStore(modelContext: context, defaults: defaults) {
+      AssetStore.Snapshot(assets: [asset])
     }
     await manager.sync()
 
@@ -103,43 +104,12 @@ struct CacheManagerTests {
     #expect(items.map(\.assetTag) == ["GONE-1", "TEST-7"])
     #expect(items.map(\.deviceModel) == ["Gone Laptop", "Test Laptop"])
   }
-
-  @Test("post-mutation refresh fetches again after any older snapshot")
-  func refreshesAfterChanges() async throws {
-    let container = try makeContainer()
-    let suite = "CacheManagerTests.\(UUID())"
-    let defaults = try #require(UserDefaults(suiteName: suite))
-    defer { defaults.removePersistentDomain(forName: suite) }
-    let loader = DeferredSnapshot()
-    let manager = CacheManager(modelContext: ModelContext(container), defaults: defaults, fetchSnapshot: loader.load)
-    let older = Task { await manager.sync() }
-    var started = loader.started.makeAsyncIterator()
-    await started.next()
-
-    var completed = false
-    let (joined, continuation) = AsyncStream<Void>.makeStream()
-    let afterChanges = Task {
-      continuation.yield(())
-      await manager.syncAfterChanges()
-      completed = true
-    }
-    var joining = joined.makeAsyncIterator()
-    await joining.next()
-    loader.finish(.success(CacheManager.Snapshot()))
-    await started.next()
-    #expect(loader.calls == 2)
-    #expect(!completed)
-    loader.finish(.success(CacheManager.Snapshot()))
-    await older.value
-    await afterChanges.value
-    #expect(completed)
-  }
 }
 
 @MainActor
 private func makeContainer() throws -> ModelContainer {
   let schema = Schema([
-    Device.self, MDMRecord.self, SnipeItUser.self, SnipeItStatus.self, DeviceProcessingItem.self,
+    Device.self, DeviceProcessingItem.self,
   ])
   return try ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
 }
@@ -148,14 +118,14 @@ private func makeContainer() throws -> ModelContainer {
 private final class DeferredSnapshot {
   let started: AsyncStream<Void>
   private let startedContinuation: AsyncStream<Void>.Continuation
-  private var continuation: CheckedContinuation<CacheManager.Snapshot, any Error>?
+  private var continuation: CheckedContinuation<AssetStore.Snapshot, any Error>?
   private(set) var calls = 0
 
   init() {
     (started, startedContinuation) = AsyncStream.makeStream()
   }
 
-  func load() async throws -> CacheManager.Snapshot {
+  func load() async throws -> AssetStore.Snapshot {
     calls += 1
     return try await withCheckedThrowingContinuation {
       continuation = $0
@@ -163,7 +133,7 @@ private final class DeferredSnapshot {
     }
   }
 
-  func finish(_ result: Result<CacheManager.Snapshot, any Error>) {
+  func finish(_ result: Result<AssetStore.Snapshot, any Error>) {
     continuation?.resume(with: result)
     continuation = nil
   }

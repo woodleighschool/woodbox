@@ -5,7 +5,6 @@ struct ToolsSplitView: View {
   // MARK: - Properties
 
   @Environment(ModelData.self) private var modelData
-  @Environment(\.scenePhase) private var scenePhase
   #if os(iOS)
     @State private var isSettingsSheetPresented = false
   #endif
@@ -27,17 +26,11 @@ struct ToolsSplitView: View {
   // MARK: - Body
 
   var body: some View {
-    Group {
-      #if os(iOS)
-        iOSToolsView
-      #else
-        macOSToolsView
-      #endif
-    }
-    .task(id: scenePhase) {
-      guard scenePhase == .active else { return }
-      await modelData.cacheManager.syncIfNeeded()
-    }
+    #if os(iOS)
+      iOSToolsView
+    #else
+      macOSToolsView
+    #endif
   }
 
   #if os(iOS)
@@ -61,7 +54,7 @@ struct ToolsSplitView: View {
           }
         }
         .navigationTitle("WoodBox")
-        .cacheRefreshable()
+        .assetRefreshable()
         .toolbar {
           ToolbarItem(placement: .primaryAction) {
             Button("Settings", systemImage: "gearshape") {
@@ -121,11 +114,6 @@ struct ToolsSplitView: View {
         NavigationStack {
           toolContent(for: modelData.selectedTab)
             .navigationTitle(modelData.selectedTab.title)
-        }
-      }
-      .toolbar {
-        ToolbarItem(placement: .primaryAction) {
-          CacheRefreshButton()
         }
       }
     }

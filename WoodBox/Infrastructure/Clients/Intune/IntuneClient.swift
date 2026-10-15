@@ -8,11 +8,12 @@ struct IntuneClient {
   // MARK: - Properties
 
   private let tokenProvider: OAuthTokenProvider
-  private let http = HTTPClient.shared
+  private let http: HTTPClient
 
   // MARK: - Init
 
-  init(tenantId: String, clientId: String, clientSecret: String) {
+  init(tenantId: String, clientId: String, clientSecret: String, http: HTTPClient = .shared) {
+    self.http = http
     let tokenURL = URL(string: "https://login.microsoftonline.com/\(tenantId)/oauth2/v2.0/token")!
 
     var components = URLComponents()
@@ -24,26 +25,20 @@ struct IntuneClient {
     ]
     let body = components.percentEncodedQuery ?? ""
 
-    tokenProvider = OAuthTokenProvider(tokenURL: tokenURL, requestBody: body)
+    tokenProvider = OAuthTokenProvider(tokenURL: tokenURL, requestBody: body, http: http)
   }
 
   // MARK: - Public Methods
 
   func testIntuneConnection() async throws {
-    _ = try await fetchIntuneDevicesPage(pageSize: 1)
+    let _: IntunePage<IntuneDevice> = try await fetchPage(
+      from: managedDevicesURL(pageSize: 1),
+      action: "fetch devices"
+    )
   }
 
-  func fetchIntuneDevices() async throws -> [IntuneDevice] {
-    var allDevices: [IntuneDevice] = []
-    var nextLink: String?
-
-    repeat {
-      let page = try await fetchIntuneDevicesPage(pageSize: 500, nextLink: nextLink)
-      allDevices.append(contentsOf: page.value)
-      nextLink = page.nextLink
-    } while nextLink != nil
-
-    return allDevices
+  func fetchIntuneDevices(serial: String? = nil) async throws -> [IntuneDevice] {
+    try await fetchAll(from: managedDevicesURL(pageSize: 500, serial: serial), action: "fetch devices")
   }
 
   func deleteIntuneDevice(id: String) async throws {
@@ -54,30 +49,45 @@ struct IntuneClient {
 
   // MARK: - Private Helpers
 
-  private func fetchIntuneDevicesPage(
-    pageSize: Int = 100,
-    nextLink: String? = nil
-  ) async throws -> IntuneDevicePageResponse {
-    let url: URL
-    if let nextLink {
-      guard let linkURL = URL(string: nextLink) else {
-        throw URLError(.badURL)
+  private func managedDevicesURL(pageSize: Int, serial: String? = nil) -> URL {
+    Self.graphBaseURL.appending(
+      path: "deviceManagement/managedDevices",
+      queryItems: [
+        URLQueryItem(name: "$top", value: "\(pageSize)"),
+        URLQueryItem(name: "$select", value: "id,deviceName,serialNumber,lastSyncDateTime,model"),
+        serial.map { URLQueryItem(name: "$filter", value: "serialNumber eq '\($0.replacingOccurrences(of: "'", with: "''"))'") },
+      ].compactMap(\.self)
+    )
+  }
+
+  private func fetchAll<Value: Decodable>(from url: URL, action: String) async throws -> [Value] {
+    var values: [Value] = []
+    var nextURL: URL? = url
+
+    while let url = nextURL {
+      try Task.checkCancellation()
+      let page: IntunePage<Value> = try await fetchPage(from: url, action: action)
+      values.append(contentsOf: page.value)
+      nextURL = try page.nextLink.map { link in
+        guard let linkURL = URL(string: link) else {
+          throw URLError(.badURL)
+        }
+        return linkURL
       }
-      url = linkURL
-    } else {
-      url = Self.graphBaseURL.appending(
-        path: "deviceManagement/managedDevices",
-        queryItems: [
-          URLQueryItem(name: "$top", value: "\(pageSize)"),
-        ]
-      )
     }
 
+    return values
+  }
+
+  private func fetchPage<Value: Decodable>(
+    from url: URL,
+    action: String
+  ) async throws -> IntunePage<Value> {
     let request = try await authorizedRequest(url: url)
     return try await http.decode(
-      IntuneDevicePageResponse.self,
+      IntunePage<Value>.self,
       from: request,
-      action: "fetch devices",
+      action: action,
       integration: "Intune"
     )
   }

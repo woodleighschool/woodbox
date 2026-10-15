@@ -1,6 +1,20 @@
 import SwiftData
 import SwiftUI
 
+struct DeviceSearchResultLabel: View {
+  let device: Device
+
+  var body: some View {
+    DeviceIdentityLabel(
+      device: nil,
+      name: device.name,
+      model: device.model,
+      assetTag: device.assetTag,
+      serial: device.serial
+    )
+  }
+}
+
 // MARK: - Public API
 
 extension View {
@@ -48,24 +62,7 @@ private struct DeviceSearchBody<Content: View>: View {
               isSearchPresented = false
               dismissSearch()
             } label: {
-              HStack(alignment: .center, spacing: 10) {
-                Image(systemName: device.symbolName)
-                  .resizable()
-                  .scaledToFit()
-                  .frame(width: 24, height: 24)
-                  .symbolEffect(.bounce, value: selection.selectedDevice?.serial == device.serial)
-                VStack(alignment: .leading, spacing: 2) {
-                  DeviceNameText(name: device.name)
-                  HStack(spacing: 4) {
-                    Image(systemName: "barcode")
-                    Text(device.assetTag)
-                    Image(systemName: "number")
-                    Text(device.serial)
-                  }
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
-                }
-              }
+              DeviceSearchResultLabel(device: device)
             }
           }
         }

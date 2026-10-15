@@ -54,7 +54,7 @@ struct SnipeItStatusesResponse: Decodable {
   let rows: [SnipeItStatusResponse]
 }
 
-struct SnipeItStatusResponse: Decodable {
+struct SnipeItStatusResponse: Decodable, Identifiable {
   let id: Int
   let name: String
 }
@@ -169,4 +169,24 @@ struct SnipeItAssetStatus: Decodable {
 struct SnipeItAssetUser: Decodable {
   let name: String
   let email: String?
+}
+
+/// Snipe-IT returns transaction failures inside a successful HTTP response.
+struct SnipeItMutationResponse: Decodable {
+  let status: String
+  let message: String
+
+  private enum CodingKeys: String, CodingKey { case status, messages }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    status = try container.decode(String.self, forKey: .status)
+    if let text = try? container.decode(String.self, forKey: .messages) {
+      message = text
+    } else if let fields = try? container.decode([String: [String]].self, forKey: .messages) {
+      message = fields.keys.sorted().flatMap { fields[$0] ?? [] }.joined(separator: "\n")
+    } else {
+      message = "The service did not confirm the change."
+    }
+  }
 }

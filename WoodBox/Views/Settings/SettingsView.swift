@@ -97,11 +97,11 @@ struct SettingsView: View {
   private func settingsDestination(_ section: SettingsSection) -> some View {
     switch section {
     case .snipeIt:
-      SnipeItSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
+      SnipeItSettingsView(settings: modelData.settings, assetStore: modelData.assetStore)
     case .jamf:
-      JamfSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
+      JamfSettingsView(settings: modelData.settings)
     case .intune:
-      IntuneSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
+      IntuneSettingsView(settings: modelData.settings)
     case .freshservice:
       FreshserviceSettingsView(settings: modelData.settings)
     case .compnow:
@@ -115,11 +115,13 @@ struct SettingsView: View {
 struct SnipeItSettingsView: View {
   // MARK: - Properties
 
-  @Query(sort: [SortDescriptor(\SnipeItStatus.name)])
-  private var statuses: [SnipeItStatus]
+  @Environment(ModelData.self) private var modelData
+  private var statuses: [SnipeItStatusResponse] {
+    modelData.snipeReferenceData.statuses
+  }
 
   @Bindable var settings: AppSettings
-  let cacheManager: CacheManager
+  let assetStore: AssetStore
 
   // MARK: - Body
 
@@ -133,11 +135,9 @@ struct SnipeItSettingsView: View {
         .onChange(of: settings.snipeItIsEnabled) { _, isOn in
           Task {
             if isOn {
-              await cacheManager.sync()
+              await assetStore.sync()
             } else {
-              settings.jamfIsEnabled = false
-              settings.intuneIsEnabled = false
-              await cacheManager.purgeAllDeviceData()
+              await assetStore.purgeAllDeviceData()
             }
           }
         }
@@ -159,20 +159,24 @@ struct SnipeItSettingsView: View {
 
       Section("Snipe-IT Statuses") {
         if statuses.isEmpty {
-          Text("Refresh the cache to fetch status labels.")
+          Text("Load statuses from Snipe-IT.")
             .font(.caption2)
             .foregroundStyle(.secondary)
         } else {
           ForEach(statuses) { status in
-            LabeledContent(status.name, value: String(status.snipeItId))
+            LabeledContent(status.name, value: String(status.id))
           }
         }
-
-        Button("Refresh Statuses", systemImage: "arrow.clockwise") {
-          Task { await cacheManager.sync() }
-        }
-        .disabled(settings.snipeItIsEnabled == false || cacheManager.isSyncing)
       }
+    }
+    .toolRefreshable(
+      state: modelData.snipeReferenceData.loadState,
+      failurePolicy: modelData.snipeRefreshFailures,
+      title: "Refresh Statuses",
+      disabled: !settings.snipeItIsEnabled
+    ) { _ in
+      await modelData.snipeReferenceData.refresh()
+      return modelData.snipeReferenceData.loadState
     }
     .formStyle(.grouped)
     .verbatimEntry()
@@ -184,7 +188,6 @@ struct JamfSettingsView: View {
   // MARK: - Properties
 
   @Bindable var settings: AppSettings
-  let cacheManager: CacheManager
 
   // MARK: - Body
 
@@ -195,17 +198,6 @@ struct JamfSettingsView: View {
           isOn: $settings.jamfIsEnabled,
           isConfigured: settings.configuredJamfClient != nil
         )
-        .disabled(settings.snipeItIsEnabled == false)
-        .onChange(of: settings.jamfIsEnabled) { _, isOn in
-          Task {
-            if isOn {
-              await cacheManager.sync()
-            } else {
-              await cacheManager.removeMDMRecords(for: [.jamf])
-            }
-          }
-        }
-
         TextField("Base URL", text: $settings.jamfBaseURL)
         #if os(iOS)
           .keyboardType(.URL)
@@ -214,12 +206,6 @@ struct JamfSettingsView: View {
         SecureField("Client Secret", text: $settings.jamfClientSecret)
 
         ConnectionTestRow(test: settings.configuredJamfClient?.testJamfConnection)
-
-        if settings.snipeItIsEnabled == false {
-          Text("Enable Snipe-IT first; Jamf only augments cached Snipe-IT devices.")
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-        }
       }
     }
     .formStyle(.grouped)
@@ -232,7 +218,6 @@ struct IntuneSettingsView: View {
   // MARK: - Properties
 
   @Bindable var settings: AppSettings
-  let cacheManager: CacheManager
 
   // MARK: - Body
 
@@ -243,28 +228,11 @@ struct IntuneSettingsView: View {
           isOn: $settings.intuneIsEnabled,
           isConfigured: settings.configuredIntuneClient != nil
         )
-        .disabled(settings.snipeItIsEnabled == false)
-        .onChange(of: settings.intuneIsEnabled) { _, isOn in
-          Task {
-            if isOn {
-              await cacheManager.sync()
-            } else {
-              await cacheManager.removeMDMRecords(for: [.intune])
-            }
-          }
-        }
-
         TextField("Tenant ID", text: $settings.intuneTenantId)
         TextField("Client ID", text: $settings.intuneClientId)
         SecureField("Client Secret", text: $settings.intuneClientSecret)
 
         ConnectionTestRow(test: settings.configuredIntuneClient?.testIntuneConnection)
-
-        if settings.snipeItIsEnabled == false {
-          Text("Enable Snipe-IT first; Intune only augments cached Snipe-IT devices.")
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-        }
       }
     }
     .formStyle(.grouped)
@@ -401,7 +369,6 @@ private struct ConnectionTestRow: View {
       case .success:
         Image(systemName: "checkmark.circle.fill")
           .foregroundStyle(.green)
-          .accessibilityLabel("Connection successful")
       case .failure:
         Button("Show Connection Error", systemImage: "xmark.circle.fill") {
           showErrorPopover = true

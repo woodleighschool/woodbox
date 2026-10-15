@@ -1,10 +1,10 @@
 import Foundation
 
-// MARK: Devices
+// MARK: Pages
 
 /// Response
-struct IntuneDevicePageResponse: Decodable {
-  let value: [IntuneDevice]
+nonisolated struct IntunePage<Value: Decodable>: Decodable {
+  let value: [Value]
   let nextLink: String?
 
   enum CodingKeys: String, CodingKey {
@@ -13,9 +13,12 @@ struct IntuneDevicePageResponse: Decodable {
   }
 }
 
-struct IntuneDevice: Decodable {
+// MARK: Devices
+
+nonisolated struct IntuneDevice: Decodable {
   let id: String
   let deviceName: String?
   let serialNumber: String
   let lastSyncDateTime: String?
+  let model: String?
 }

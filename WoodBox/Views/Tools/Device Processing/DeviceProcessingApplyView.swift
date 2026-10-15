@@ -14,13 +14,6 @@ struct DeviceProcessingApplyView: View {
     case finished
   }
 
-  private enum Activity: Equatable {
-    case waiting
-    case working(String)
-    case applied
-    case failed(String)
-  }
-
   @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
   #if os(macOS)
@@ -30,7 +23,7 @@ struct DeviceProcessingApplyView: View {
   let items: [DeviceProcessingItem]
   let application: DeviceProcessingApplication
 
-  @State private var activities: [String: Activity] = [:]
+  @State private var activities: [String: OperationActivity] = [:]
   @State private var runState = RunState.ready
 
   var body: some View {
@@ -43,14 +36,15 @@ struct DeviceProcessingApplyView: View {
         Section {
           ForEach(items) { item in
             let device = device(for: item)
-            DeviceIdentityLabel(
-              device: device,
-              name: item.deviceName,
-              model: item.deviceModel,
-              assetTag: item.assetTag,
-              serial: item.serial
-            ) {
-              ActivityLabel(activity: activities[item.serial] ?? .waiting)
+            HStack(spacing: 12) {
+              DeviceIdentityLabel(
+                device: device,
+                name: item.deviceName,
+                model: item.deviceModel,
+                assetTag: item.assetTag,
+                serial: item.serial
+              )
+              OperationActivityLabel(activity: activities[item.serial] ?? .waiting)
             }
           }
         } header: {
@@ -59,7 +53,7 @@ struct DeviceProcessingApplyView: View {
           Text(footerMessage)
         }
       }
-      .navigationTitle("Apply Status")
+      .navigationTitle("Process Devices")
       #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
       #endif
@@ -76,9 +70,8 @@ struct DeviceProcessingApplyView: View {
             if runState == .running {
               ProgressView()
                 .controlSize(.small)
-                .accessibilityLabel("Applying status")
             } else if runState == .ready {
-              Button("Apply", action: start)
+              Button("Process", action: start)
                 .buttonStyle(.borderedProminent)
             }
           }
@@ -109,15 +102,7 @@ struct DeviceProcessingApplyView: View {
       return "\(failures) \(failures == 1 ? "device needs" : "devices need") attention. The queue remains unchanged."
     }
 
-    let providers = items
-      .compactMap(device(for:))
-      .flatMap(\.mdmProviderNames)
-    let providerNames = Array(Set(providers)).sorted()
-    let deletionDescription = providerNames.isEmpty
-      ? "No cached MDM records will be deleted."
-      : "The devices will be deleted from \(providerNames.joined(separator: " and "))."
-
-    return "\(deletionDescription) Snipe-IT status “\(application.statusName)” will then be applied."
+    return "Current records will be removed from enabled MDM services before applying the selected Snipe-IT status."
   }
 
   private func start() {
@@ -153,41 +138,10 @@ struct DeviceProcessingApplyView: View {
       }
     }
 
-    if !Task.isCancelled {
-      await modelData.cacheManager.syncAfterChanges()
-    }
     runState = .finished
   }
 
   private func device(for item: DeviceProcessingItem) -> Device? {
     modelContext.fetchDevice(serial: item.serial)
-  }
-
-  private struct ActivityLabel: View {
-    let activity: Activity
-
-    var body: some View {
-      HStack(spacing: 6) {
-        switch activity {
-        case .waiting:
-          Image(systemName: "circle")
-          Text("Waiting")
-        case let .working(message):
-          ProgressView().controlSize(.small)
-          Text(message)
-        case .applied:
-          Image(systemName: "checkmark.circle.fill")
-            .foregroundStyle(.green)
-          Text("Applied")
-        case let .failed(message):
-          Image(systemName: "exclamationmark.circle.fill")
-            .foregroundStyle(.red)
-          Text(message)
-        }
-      }
-      .font(.caption)
-      .foregroundStyle(.secondary)
-      .lineLimit(2)
-    }
   }
 }

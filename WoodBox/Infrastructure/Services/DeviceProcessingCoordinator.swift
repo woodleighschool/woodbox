@@ -8,6 +8,8 @@ nonisolated enum DeviceProcessingOutcome: Equatable, Sendable {
 
 @MainActor
 protocol DeviceProcessingServicing {
+  func fetchAsset(id: Int) async throws -> SnipeItAssetResponse
+  func fetchMDMRecords(serial: String) async throws -> [MDMRecord]
   func deleteMDMRecord(_ request: MDMDeletionService.Request) async throws
   func checkInSnipeItAsset(assetId: Int, statusId: Int) async throws
   func updateSnipeItAsset(
@@ -21,8 +23,19 @@ protocol DeviceProcessingServicing {
 struct LiveDeviceProcessingService: DeviceProcessingServicing {
   let settings: AppSettings
 
+  func fetchAsset(id: Int) async throws -> SnipeItAssetResponse {
+    guard let client = settings.snipeItClient else {
+      throw IntegrationError(action: "fetch asset", integration: "Snipe-IT", message: "The integration is not enabled or configured")
+    }
+    return try await client.fetchSnipeItAsset(id: id)
+  }
+
+  func fetchMDMRecords(serial: String) async throws -> [MDMRecord] {
+    try await MDMInventoryService(settings: settings).fetch(serial: serial)
+  }
+
   func deleteMDMRecord(_ request: MDMDeletionService.Request) async throws {
-    try await MDMDeletionService.delete(request)
+    try await MDMDeletionService.delete(request, settings: settings)
   }
 
   func checkInSnipeItAsset(assetId: Int, statusId: Int) async throws {
@@ -93,10 +106,23 @@ struct DeviceProcessingCoordinator {
       )
     }
 
+    guard !item.serial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      return .failed("A serial number is required to process this device.")
+    }
+
     do {
-      let requests = device.mdmRecords.sorted(by: {
-        $0.provider.processingOrder < $1.provider.processingOrder
-      }).map(MDMDeletionService.Request.init)
+      progress("Checking Snipe-IT")
+      let asset = try await service.fetchAsset(id: assetId)
+      guard asset.id == assetId, asset.serial.caseInsensitiveCompare(item.serial) == .orderedSame else {
+        throw IntegrationError(action: "process device", integration: "Snipe-IT", message: "The asset no longer matches this serial number")
+      }
+      device.update(from: asset)
+      item.update(from: device)
+      try save()
+
+      progress("Checking MDM records")
+      let requests = try await service.fetchMDMRecords(serial: item.serial)
+        .map(MDMDeletionService.Request.init)
       for request in requests {
         try Task.checkCancellation()
         progress("Deleting from \(request.provider.rawValue)")
@@ -106,12 +132,6 @@ struct DeviceProcessingCoordinator {
         } catch {
           return .failed(error.localizedDescription)
         }
-
-        try MDMDeletionService.removeLocally(
-          request,
-          from: device,
-          modelContext: modelContext
-        )
       }
 
       try Task.checkCancellation()

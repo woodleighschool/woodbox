@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import Testing
 @testable import WoodBox
@@ -5,6 +6,42 @@ import Testing
 @Suite("Device processing coordinator")
 @MainActor
 struct DeviceProcessingCoordinatorTests {
+  @Test("blank serials fail before any service call", arguments: ["", " ", "\n\t"])
+  func rejectsBlankSerial(serial: String) async throws {
+    let fixture = try ProcessingFixture()
+    let device = fixture.makeDevice(assigned: false)
+    device.serial = serial
+    let item = fixture.makeItem(profile: .restock, device: device)
+    let outcome = await fixture.coordinator.process(
+      item: item, device: device, targetStatusId: 7, targetStatusName: "Selected Status",
+      conditionField: "", conditionNotesField: ""
+    )
+    #expect(outcome != .applied)
+    #expect(fixture.service.fetches.isEmpty)
+    #expect(fixture.service.events.isEmpty)
+  }
+
+  @Test("an unreachable Snipe-IT asset stops before MDM lookup or deletion")
+  func offlineCampusStopsProcessing() async throws {
+    let fixture = try ProcessingFixture()
+    let device = fixture.makeDevice(assigned: false)
+    fixture.addMDMRecords(to: device)
+    let item = fixture.makeItem(profile: .restock, device: device)
+    fixture.service.fetchError = URLError(.notConnectedToInternet)
+    let outcome = await fixture.coordinator.process(
+      item: item,
+      device: device,
+      targetStatusId: 7,
+      targetStatusName: "Selected Status",
+      conditionField: "",
+      conditionNotesField: ""
+    )
+    #expect(outcome != .applied)
+    #expect(fixture.service.fetches == ["asset"])
+    #expect(fixture.service.events.isEmpty)
+    #expect(fixture.service.records.count == 2)
+  }
+
   @Test("Sale drafts persist their grade and optional notes")
   func saleDraftCarriesCondition() throws {
     let fixture = try ProcessingFixture()
@@ -63,7 +100,7 @@ struct DeviceProcessingCoordinatorTests {
         ]
       ),
     ])
-    #expect(device.mdmRecords.isEmpty)
+    #expect(fixture.service.records.isEmpty)
     #expect(device.assignedUserName == nil)
     #expect(device.assignedUserEmail == nil)
     #expect(device.statusId == 7)
@@ -89,7 +126,7 @@ struct DeviceProcessingCoordinatorTests {
     )
 
     #expect(fixture.service.events == [.delete(.jamf, "jamf-1")])
-    #expect(device.mdmRecords.map(\.deviceId) == ["jamf-1"])
+    #expect(fixture.service.records.map(\.deviceId) == ["jamf-1"])
     #expect(device.statusId == nil)
     #expect(outcome != .applied)
   }
@@ -132,7 +169,7 @@ struct DeviceProcessingCoordinatorTests {
     )
 
     #expect(fixture.service.events.isEmpty)
-    #expect(device.mdmRecords.count == 1)
+    #expect(fixture.service.records.count == 1)
     #expect(outcome != .applied)
   }
 
@@ -154,7 +191,7 @@ struct DeviceProcessingCoordinatorTests {
     )
 
     #expect(firstOutcome != .applied)
-    #expect(device.mdmRecords.isEmpty)
+    #expect(fixture.service.records.isEmpty)
 
     fixture.service.failSnipeUpdate = false
     fixture.service.events.removeAll()
@@ -234,7 +271,7 @@ private final class ProcessingFixture {
   let coordinator: DeviceProcessingCoordinator
 
   init() throws {
-    let schema = Schema([Device.self, MDMRecord.self, DeviceProcessingItem.self])
+    let schema = Schema([Device.self, DeviceProcessingItem.self])
     let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try ModelContainer(for: schema, configurations: configuration)
     context = ModelContext(container)
@@ -249,6 +286,7 @@ private final class ProcessingFixture {
       device.assignedUserEmail = "person@example.invalid"
     }
     context.insert(device)
+    service.device = device
     return device
   }
 
@@ -256,14 +294,14 @@ private final class ProcessingFixture {
     to device: Device,
     providers: [MDMProvider] = [.jamf, .intune]
   ) {
-    device.mdmRecords = providers.map { provider in
+    service.records = providers.map { provider in
       MDMRecord(
         provider: provider,
         deviceId: provider == .jamf ? "jamf-1" : "intune-1",
+        serial: device.serial,
         deviceName: "test-device",
         lastCheckIn: nil,
-        jamfDeviceType: provider == .jamf ? .computer : nil,
-        device: device
+        jamfDeviceType: provider == .jamf ? .computer : nil
       )
     }
   }
@@ -289,15 +327,38 @@ private final class TestDeviceProcessingService: DeviceProcessingServicing {
     case update(assetId: Int, statusId: Int?, fields: [String: String])
   }
 
+  var device: Device!
+  var records: [MDMRecord] = []
+  var fetchError: Error?
   var events: [Event] = []
+  var fetches: [String] = []
   var failingDeletionId: String?
   var failSnipeUpdate = false
+
+  func fetchAsset(id: Int) async throws -> SnipeItAssetResponse {
+    fetches.append("asset")
+    if let fetchError {
+      throw fetchError
+    }
+    let assigned: Any = device.assignedUserName.map { ["name": $0, "email": device.assignedUserEmail ?? ""] } ?? NSNull()
+    let data = try JSONSerialization.data(withJSONObject: [
+      "id": id, "asset_tag": device.assetTag, "serial": device.serial,
+      "model": ["name": device.model], "assigned_to": assigned,
+    ])
+    return try JSONDecoder().decode(SnipeItAssetResponse.self, from: data)
+  }
+
+  func fetchMDMRecords(serial: String) async throws -> [MDMRecord] {
+    fetches.append("mdm")
+    return records.filter { $0.serial == serial }
+  }
 
   func deleteMDMRecord(_ request: MDMDeletionService.Request) async throws {
     events.append(.delete(request.provider, request.deviceId))
     if request.deviceId == failingDeletionId {
       throw TestProcessingError.failed
     }
+    records.removeAll { MDMDeletionService.Request(record: $0) == request }
   }
 
   func checkInSnipeItAsset(assetId: Int, statusId: Int) async throws {

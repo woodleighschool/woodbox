@@ -9,16 +9,16 @@ struct CacheRefreshPolicyTests {
   func refreshesWhenNeeded() {
     let now = Date(timeIntervalSinceReferenceDate: 1000)
 
-    #expect(CacheManager.shouldAutomaticallySync(lastSyncDate: nil, now: now))
+    #expect(AssetStore.shouldAutomaticallySync(lastSyncDate: nil, now: now))
     #expect(
-      CacheManager.shouldAutomaticallySync(
-        lastSyncDate: now.addingTimeInterval(-CacheManager.automaticSyncInterval),
+      AssetStore.shouldAutomaticallySync(
+        lastSyncDate: now.addingTimeInterval(-AssetStore.automaticSyncInterval),
         now: now
       )
     )
     #expect(
-      CacheManager.shouldAutomaticallySync(
-        lastSyncDate: now.addingTimeInterval(-(CacheManager.automaticSyncInterval - 1)),
+      AssetStore.shouldAutomaticallySync(
+        lastSyncDate: now.addingTimeInterval(-(AssetStore.automaticSyncInterval - 1)),
         now: now
       ) == false
     )
