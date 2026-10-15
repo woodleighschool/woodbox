@@ -12,9 +12,11 @@ import SwiftUI
     let subtitle: String
     let showsCount: Bool
     let onDevice: (Device) -> Void
+    var additionalSerials: [String] = []
+    var onSerial: ((String) -> Void)?
 
     @State private var lookup: DeviceScanLookup?
-    @State private var choices: [Device] = []
+    @State private var choices: [DeviceScanMatch] = []
     @State private var failure: String?
 
     var body: some View {
@@ -52,7 +54,7 @@ import SwiftUI
         .toolbarTitleDisplayMode(.inline)
         .task {
           do {
-            lookup = try DeviceScanLookup(devices: modelContext.fetch(FetchDescriptor<Device>()))
+            lookup = try DeviceScanLookup(devices: modelContext.fetch(FetchDescriptor<Device>()), additionalSerials: additionalSerials)
           } catch {
             failure = "Unable to load devices: \(error.localizedDescription)"
           }
@@ -83,11 +85,13 @@ import SwiftUI
         ForEach(choices) { device in
           Button {
             choices = []
-            onDevice(device)
+            select(device)
           } label: {
             VStack {
               Text(device.serial).font(.body.monospaced())
-              Text("Asset Tag \(device.assetTag)").font(.caption)
+              if let tag = device.assetTag {
+                Text("Asset Tag \(tag)").font(.caption)
+              }
             }
             .frame(maxWidth: .infinity)
           }
@@ -97,6 +101,14 @@ import SwiftUI
       .padding()
       .glassEffect(.regular, in: .rect(cornerRadius: 20))
       .padding()
+    }
+
+    private func select(_ match: DeviceScanMatch) {
+      if let device = match.device {
+        onDevice(device)
+      } else {
+        onSerial?(match.serial)
+      }
     }
 
     private func handleCandidates(_ scans: [DeviceScan]) {
@@ -114,7 +126,7 @@ import SwiftUI
         }
       case 1:
         choices = []
-        onDevice(matches[0])
+        select(matches[0])
       default:
         choices = matches.sorted { $0.serial < $1.serial }
       }

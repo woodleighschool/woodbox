@@ -35,16 +35,35 @@ nonisolated enum DeviceScan: Hashable {
   }
 }
 
-struct DeviceScanLookup {
-  private let barcodes: [String: [Device]]
-  private let serials: [String: [Device]]
+struct DeviceScanMatch: Identifiable {
+  let id = UUID()
+  let serial: String
+  let assetTag: String?
+  let device: Device?
+}
 
-  init(devices: [Device]) {
-    barcodes = Dictionary(grouping: devices, by: \.assetTag)
-    serials = Dictionary(grouping: devices) { DeviceScan.serialKey($0.serial) }
+struct DeviceScanLookup {
+  private let barcodes: [String: [DeviceScanMatch]]
+  private let serials: [String: [DeviceScanMatch]]
+
+  init(devices: [Device], additionalSerials: [String] = []) {
+    let assetSerials = Set(devices.map(\.serial))
+    let matches = devices.map { DeviceScanMatch(serial: $0.serial, assetTag: $0.assetTag, device: $0) }
+      + Set(additionalSerials).subtracting(assetSerials).map { DeviceScanMatch(serial: $0, assetTag: nil, device: nil) }
+    var barcodes: [String: [DeviceScanMatch]] = [:]
+    for match in matches {
+      if let tag = match.assetTag.nilIfEmpty {
+        barcodes[tag, default: []].append(match)
+      }
+      if match.serial != match.assetTag {
+        barcodes[match.serial, default: []].append(match)
+      }
+    }
+    self.barcodes = barcodes
+    serials = Dictionary(grouping: matches) { DeviceScan.serialKey($0.serial) }
   }
 
-  func matches(_ scan: DeviceScan) -> [Device] {
+  func matches(_ scan: DeviceScan) -> [DeviceScanMatch] {
     switch scan {
     case let .barcode(value): barcodes[value] ?? []
     case let .text(value): serials[DeviceScan.serialKey(value)] ?? []

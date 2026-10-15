@@ -15,8 +15,10 @@ final class ModelData {
   let deviceSelection = DeviceSelectionState()
   let deduplication: DeduplicationState
   let snipeReferenceData: SnipeITReferenceData
+  let enrollmentQueue: EnrollmentQueue
   let snipeRefreshFailures = RefreshFailurePolicy()
   let deduplicationRefreshFailures = RefreshFailurePolicy()
+  let enrollmentRefreshFailures = RefreshFailurePolicy()
 
   // MARK: - Init
 
@@ -28,6 +30,7 @@ final class ModelData {
       deleteRecord: { try await MDMDeletionService.delete($0, settings: settings) }
     )
     snipeReferenceData = SnipeITReferenceData(settings: settings)
+    enrollmentQueue = EnrollmentQueue(service: LiveEnrollmentService(settings: settings))
   }
 }
 

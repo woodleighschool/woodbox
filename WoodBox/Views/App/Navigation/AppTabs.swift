@@ -5,6 +5,7 @@ enum AppTab: Hashable, Identifiable {
   case restock
   case sale
   case deviceDeduplication
+  case enrollment
 
   var id: Self {
     self
@@ -16,6 +17,7 @@ enum AppTab: Hashable, Identifiable {
     case .restock: "Restock"
     case .sale: "Sale"
     case .deviceDeduplication: "Dedupe"
+    case .enrollment: "Enrollment"
     }
   }
 
@@ -25,6 +27,7 @@ enum AppTab: Hashable, Identifiable {
     case .restock: DeviceProcessingProfile.restock.symbol
     case .sale: DeviceProcessingProfile.sale.symbol
     case .deviceDeduplication: "rectangle.on.rectangle.slash"
+    case .enrollment: "laptopcomputer.and.arrow.down"
     }
   }
 }

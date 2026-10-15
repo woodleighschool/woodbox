@@ -20,6 +20,7 @@ struct ToolsSplitView: View {
   private var utilityTabs: [AppTab] {
     [
       .deviceDeduplication,
+      .enrollment,
     ]
   }
 
@@ -133,6 +134,9 @@ struct ToolsSplitView: View {
 
     case .deviceDeduplication:
       DeviceDeduplicationView()
+
+    case .enrollment:
+      EnrollmentPolicyView()
     }
   }
 }

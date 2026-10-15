@@ -4,6 +4,8 @@ struct IntuneClient {
   // MARK: - Types
 
   private static let graphBaseURL = URL(string: "https://graph.microsoft.com/v1.0")!
+  /// Automated device enrollment is only exposed by the beta endpoint.
+  private static let graphBetaURL = URL(string: "https://graph.microsoft.com/beta")!
 
   // MARK: - Properties
 
@@ -47,6 +49,42 @@ struct IntuneClient {
     _ = try await http.data(for: request, action: "delete device", integration: "Intune")
   }
 
+  func fetchEnrollmentTokens() async throws -> [IntuneEnrollmentToken] {
+    try await fetchAll(
+      from: Self.graphBetaURL.appending(
+        path: "deviceManagement/depOnboardingSettings",
+        queryItems: [
+          URLQueryItem(name: "$expand", value: "defaultTvOSEnrollmentProfile,defaultVisionOSEnrollmentProfile"),
+        ]
+      ),
+      action: "fetch enrollment program tokens"
+    )
+  }
+
+  func fetchEnrollmentProfiles(tokenId: String) async throws -> [IntuneEnrollmentProfile] {
+    try await fetchAll(
+      from: enrollmentTokenURL(tokenId).appending(path: "enrollmentProfiles"),
+      action: "fetch enrollment policies"
+    )
+  }
+
+  func fetchEnrollmentDevices(tokenId: String) async throws -> [IntuneEnrollmentDevice] {
+    try await fetchAll(
+      from: enrollmentTokenURL(tokenId).appending(path: "importedAppleDeviceIdentities"),
+      action: "fetch enrollment program devices"
+    )
+  }
+
+  func assignEnrollmentProfile(id profileId: String, tokenId: String, serials: [String]) async throws {
+    let url = enrollmentTokenURL(tokenId).appending(
+      path: "enrollmentProfiles/\(profileId)/updateDeviceProfileAssignment"
+    )
+    var request = try await authorizedRequest(url: url, method: "POST")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try JSONEncoder().encode(IntuneProfileAssignmentRequest(deviceIds: serials))
+    _ = try await http.data(for: request, action: "assign enrollment policy", integration: "Intune")
+  }
+
   // MARK: - Private Helpers
 
   private func managedDevicesURL(pageSize: Int, serial: String? = nil) -> URL {
@@ -58,6 +96,10 @@ struct IntuneClient {
         serial.map { URLQueryItem(name: "$filter", value: "serialNumber eq '\($0.replacingOccurrences(of: "'", with: "''"))'") },
       ].compactMap(\.self)
     )
+  }
+
+  private func enrollmentTokenURL(_ tokenId: String) -> URL {
+    Self.graphBetaURL.appending(path: "deviceManagement/depOnboardingSettings/\(tokenId)")
   }
 
   private func fetchAll<Value: Decodable>(from url: URL, action: String) async throws -> [Value] {

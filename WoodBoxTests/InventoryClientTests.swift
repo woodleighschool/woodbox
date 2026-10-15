@@ -34,6 +34,37 @@ struct InventoryClientTests {
     #expect(items.first { $0.name == "$filter" }?.value == "serialNumber eq 'SERIAL-1'")
     #expect(requests[1].absoluteString == "https://graph.microsoft.com/v1.0/next")
   }
+
+  @Test("enrollment tokens request default profiles and allow missing or null defaults across pages")
+  func enrollmentDefaultsAndPaging() async throws {
+    let client = IntuneClient(
+      tenantId: "test",
+      clientId: "test",
+      clientSecret: "test",
+      http: HTTPClient { request in
+        let url = try #require(request.url)
+        let body: String
+        switch url.path {
+        case "/test/oauth2/v2.0/token":
+          body = #"{"access_token":"test-token","expires_in":3600}"#
+        case "/beta/deviceManagement/depOnboardingSettings":
+          let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+          #expect(items.first { $0.name == "$expand" }?.value == "defaultTvOSEnrollmentProfile,defaultVisionOSEnrollmentProfile")
+          body = #"{"value":[{"id":"first"}],"@odata.nextLink":"https://graph.microsoft.com/beta/next"}"#
+        case "/beta/next":
+          body = #"{"value":[{"id":"second","defaultTvOSEnrollmentProfile":null,"defaultVisionOSEnrollmentProfile":null}]}"#
+        default:
+          Issue.record("Unexpected request: \(url.path)")
+          throw URLError(.badURL)
+        }
+        return (Data(body.utf8), HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+      }
+    )
+
+    let tokens = try await client.fetchEnrollmentTokens()
+    #expect(tokens.map(\.id) == ["first", "second"])
+    #expect(tokens.flatMap { EnrollmentPolicy.defaults(of: $0, excluding: []) }.isEmpty)
+  }
 }
 
 private actor InventoryStub {

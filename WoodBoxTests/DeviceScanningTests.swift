@@ -4,6 +4,14 @@ import Testing
 @Suite("Continuous device scanning")
 @MainActor
 struct DeviceScanningTests {
+  @Test("service-only serials can be scanned without a cached asset")
+  func scansServiceOnlyDevices() {
+    let lookup = DeviceScanLookup(devices: [], additionalSerials: ["AB01234567"])
+    #expect(lookup.matches(.barcode("AB01234567")).map(\.serial) == ["AB01234567"])
+    #expect(lookup.matches(.text("A8OLZ34567")).map(\.serial) == ["AB01234567"])
+    #expect(lookup.matches(.text("AB01234567")).first?.device == nil)
+  }
+
   @Test("OCR considers ambiguous glyphs even when one serial is an exact match")
   func resolvesOCRWithoutGuessing() {
     let zero = Device(serial: "AB01234567", assetTag: "100", model: "Test Laptop")

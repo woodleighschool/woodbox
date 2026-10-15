@@ -9,9 +9,9 @@ Native iOS and macOS tool for repair intake, device restocking, sale preparation
 
 ## 🚀 Usage
 
-The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP, and the iOS app comes through TestFlight. Extract the ZIP, open WoodBox, then choose a workflow and scan or search for a device. Restock and Sale accept one device or a working queue, using the camera on iOS and typed or USB scanner input on macOS. Service connections and workflow defaults live in Settings.
+The macOS app is attached to the [latest release](https://github.com/woodleighschool/woodbox/releases/latest) as a ZIP, and the iOS app comes through TestFlight. Extract the ZIP, open WoodBox, then choose a workflow and scan or search for a device. Restock and Sale accept one device or a working queue, using the camera on iOS and typed or USB scanner input on macOS. Enrollment builds the same kind of queue, or takes every device on an Intune enrollment policy, shows each device's current policy, and assigns another. Service connections and workflow defaults live in Settings.
 
-Snipe-IT assets are cached for search and device details. Dedupe loads current Jamf and Intune records when opened. It includes devices without a matching asset and works without a Snipe-IT connection. Refresh updates the current tool. Restock and Sale verify the asset in Snipe-IT before removing current MDM records and applying the selected status.
+Snipe-IT assets are cached for search and device details. Dedupe loads current Jamf and Intune records when opened; Enrollment loads current Intune enrollment devices and policies. Both include devices without a matching asset and work without a Snipe-IT connection. Refresh updates the current tool. Restock and Sale verify the asset in Snipe-IT before removing current MDM records and applying the selected status.
 
 ## 🧑‍💻 Development
 
