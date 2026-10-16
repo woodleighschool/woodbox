@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.6.0](https://github.com/woodleighschool/woodbox/compare/v2.5.0...v2.6.0) (2026-10-16)
+
+
+### Features
+
+* **enrollment:** add bulk policy assignment ([e0242c0](https://github.com/woodleighschool/woodbox/commit/e0242c06ea2fe3860a764013fa40bf6dcd7d1559))
+
+
+### Bug Fixes
+
+* **compnow:** report rejected requests ([95e7259](https://github.com/woodleighschool/woodbox/commit/95e72593a185420c74e589b47b10303ddf1e1c29))
+
 ## [2.5.0](https://github.com/woodleighschool/woodbox/compare/v2.4.0...v2.5.0) (2026-10-13)
 
 
