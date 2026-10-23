@@ -43,8 +43,8 @@ nonisolated struct DeviceProcessingCSV: Transferable {
   }
 }
 
+@MainActor
 extension DeviceProcessingCSV {
-  @MainActor
   init(items: [DeviceProcessingItem], statusName: String?) {
     rows = items.map { item in
       Row(
