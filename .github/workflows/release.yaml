@@ -27,6 +27,7 @@ jobs:
     name: macOS release
     if: github.event_name == 'release'
     runs-on: xcode-27
+    timeout-minutes: 15
     permissions:
       contents: write
     env:
