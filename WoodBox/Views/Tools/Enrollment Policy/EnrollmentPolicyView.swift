@@ -99,7 +99,6 @@ struct EnrollmentPolicyView: View {
     }
   }
 
-  @ViewBuilder
   private var platformContent: some View {
     #if os(iOS)
       iOSContent
