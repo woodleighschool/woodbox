@@ -11,11 +11,9 @@ pin = true
 lockfile = true
 
 [tasks.format]
-description = "Format Swift code"
 run = "swiftformat WoodBox WoodBoxTests"
 
 [tasks.fmt-check]
-description = "Check Swift formatting"
 run = "swiftformat WoodBox WoodBoxTests --lint"
 
 [tasks.build]
@@ -29,7 +27,7 @@ xcodebuild build \
 """
 
 [tasks.test]
-description = "Run focused Swift tests"
+description = "Run the macOS test suite"
 run = """
 xcodebuild test \
   -project WoodBox.xcodeproj \
@@ -55,7 +53,7 @@ periphery scan \
 """
 
 [tasks.lint]
-description = "Run app lint"
+description = "Check for unused Swift code"
 depends = ["periphery"]
 
 [hooks]
