@@ -17,7 +17,7 @@ run = "swiftformat WoodBox WoodBoxTests"
 run = "swiftformat WoodBox WoodBoxTests --lint"
 
 [tasks.build]
-description = "Build the unsigned macOS app"
+description = "Unsigned"
 run = """
 xcodebuild build \
   -project WoodBox.xcodeproj \
@@ -27,7 +27,6 @@ xcodebuild build \
 """
 
 [tasks.test]
-description = "Run the macOS test suite"
 run = """
 xcodebuild test \
   -project WoodBox.xcodeproj \
@@ -37,7 +36,6 @@ xcodebuild test \
 """
 
 [tasks.periphery]
-description = "Build the macOS app and reject unused Swift code"
 run = """
 periphery scan \
   --project WoodBox.xcodeproj \
@@ -53,7 +51,6 @@ periphery scan \
 """
 
 [tasks.lint]
-description = "Check for unused Swift code"
 depends = ["periphery"]
 
 [hooks]
